@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#100e18">
-<title>Ash Veil — Bellworn Trail</title>
+<title>Shadow Veil — The Bellworn Trail</title>
 <style>
 :root{color-scheme:dark;--gold:#d6b477}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100e18;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f4edf5;touch-action:none}button{font:inherit}
 #game{position:relative;width:100%;height:100%;height:100dvh;overflow:hidden;background:#100e18}canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -17,16 +17,17 @@
 </head>
 <body><div id="game">
 <canvas id="world" aria-label="Trilha de batalha vertical"></canvas>
-<div class="hud"><div class="topline"><div class="brand">✦ ASH VEIL</div><div class="pill" id="stage">PATH 1 · 0/15</div><div class="pill" id="souls">◇ 0 SOULS</div></div>
+<div class="hud"><div class="topline"><div class="brand">✦ SHADOW VEIL</div><div class="pill" id="stage">PATH 1 · 0/15</div><div class="pill" id="souls">◇ 0 SOULS</div></div>
 <div class="bars"><div class="barwrap"><div class="barlabel"><span>VITALITY</span><span id="hpText">100 / 100</span></div><div class="bar"><div class="fill" id="hpFill"></div></div></div><div class="barwrap"><div class="barlabel"><span>MANA</span><span id="manaText">60 / 100</span></div><div class="bar"><div class="fill" id="manaFill"></div></div></div></div><div class="objective" id="objective">Follow the trail. Keep the flame alive.</div></div>
 <div class="decklabel">DECK · 6 CARDS</div><div class="deck" id="deck"></div><div id="toast"></div>
-<div id="overlay"><div class="modal"><h1>ASH VEIL</h1><p>The bells ring beyond the mist. Press onward, summon creatures, and break the reliquaries to gather souls and mana.</p><p><b>Controls:</b> drag across the ground to move. Tap a wraith to focus it or a reliquary to break it. Play your six cards when you have enough mana.</p><button class="start" id="start">ENTER THE TRAIL</button><div class="legend">PROTOTYPE · MANUAL TACTICAL COMBAT</div></div></div>
+<div id="overlay"><div class="modal"><h1>SHADOW VEIL</h1><p>The bells ring beyond the mist. Press onward, summon creatures, and break the reliquaries to gather souls and mana.</p><p><b>Controls:</b> drag across the ground to move. Tap a wraith to focus it or a reliquary to break it. Play your six cards when you have enough mana.</p><button class="start" id="start">ENTER THE TRAIL</button><div class="legend">PROTOTYPE · MANUAL TACTICAL COMBAT</div></div></div>
 </div>
 <script>
 (()=>{
-const canvas=document.getElementById('world'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id),sprites=new Image(),terrain=new Image();
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id),sprites=new Image(),terrain=new Image(),battlefield=new Image();
 sprites.src='assets/characters.png';
 terrain.src='assets/trail-texture.png';
+battlefield.src='assets/battlefield.webp';
 let W=0,H=0,dpr=1,last=0,running=false,ended=false,elapsed=0,spawnTimer=0,crateTimer=5,kills=0,wave=1,souls=0,scroll=0,player,allies=[],enemies=[],particles=[],bolts=[],crates=[],goal=null,focus=null,bossSpawned=false,dragging=false;
 const cards=[
 {id:'guard',name:'Graveguard',symbol:'☠',desc:'Tank · melee',cost:22,type:'unit',hp:92,damage:9,range:31,speed:42,rate:.8,color:'#d8c9d5',role:'tank',sprite:1},
@@ -40,7 +41,7 @@ function buildDeck(){$('deck').innerHTML=cards.map(c=>'<button class="card" data
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);if(player){player.x=clamp(player.x,24,W-24);player.y=clamp(player.y,112,H-174);}}
 function toast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1450);}
-function reset(){player={x:W/2,y:H*.68,r:13,hp:100,maxHp:100,mana:60,maxMana:100,speed:152,invuln:0,shot:0,sprite:0};allies=[];enemies=[];particles=[];bolts=[];crates=[];elapsed=0;scroll=0;spawnTimer=.7;crateTimer=5;kills=0;wave=1;souls=0;bossSpawned=false;focus=null;goal=null;ended=false;running=true;$('overlay').style.display='none';toast('The mist is moving…');updateHud();}
+function reset(){player={x:W/2,y:H*.68,r:12,hp:100,maxHp:100,mana:60,maxMana:100,speed:152,invuln:0,shot:0,sprite:2,hero:true};allies=[];enemies=[];particles=[];bolts=[];crates=[];elapsed=0;scroll=0;spawnTimer=.7;crateTimer=5;kills=0;wave=1;souls=0;bossSpawned=false;focus=null;goal=null;ended=false;running=true;$('overlay').style.display='none';toast('The mist is moving…');updateHud();}
 function nearest(from,range){let t=null,b=range||Infinity;for(const e of enemies){const d=dist(from,e);if(d<b){b=d;t=e;}}return t;}
 function spawnEnemy(kind){const x=W*.13+Math.random()*W*.74,boss=kind==='boss',tough=boss||Math.random()<.18+wave*.035,hp=boss?360:(tough?64+wave*7:31+wave*3);enemies.push({x:x,y:82,r:boss?25:(tough?15:11),hp:hp,maxHp:hp,damage:boss?18:(tough?12:7),speed:boss?17:(tough?24+wave:31+wave),attackCd:.5+Math.random(),color:boss?'#b74664':(tough?'#bd687c':'#8171a0'),tough:tough,boss:boss,slow:0,sprite:boss?7:(tough?6:5)});}
 function spawnCrate(){crates.push({x:W*.18+Math.random()*W*.64,y:80,type:Math.random()<.5?'mana':'soul',r:13,phase:Math.random()*6});}
@@ -58,11 +59,11 @@ for(const a of [...allies]){a.cd-=dt;const t=nearest(a,a.range+70);if(a.role==='
 if(player.shot<=0){const t=focus&&enemies.includes(focus)?focus:nearest(player,220);if(t){t.hp-=8;player.shot=.78;bolts.push({x:player.x,y:player.y,target:t,life:.18,color:'#c6a8e8'});if(t.hp<=0)killEnemy(t);}}
 for(const e of [...enemies]){e.slow=Math.max(0,e.slow-dt);const t=[player,...allies].sort((a,b)=>dist(e,a)-dist(e,b))[0],range=e.r+t.r+3;if(dist(e,t)>range)moveToward(e,t,e.speed*(e.slow?.42:1),dt);else{e.attackCd-=dt;if(e.attackCd<=0){t.hp-=e.damage;e.attackCd=e.boss?1.15:1;burst(t.x,t.y,'#d85c65',4);if(t===player)player.invuln=.22;if(t.hp<=0){if(t===player){endGame(false);return;}const i=allies.indexOf(t);if(i>=0)allies.splice(i,1);}}}}
 for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy*=.96;p.life-=dt;}particles=particles.filter(p=>p.life>0);bolts.forEach(b=>b.life-=dt);bolts=bolts.filter(b=>b.life>0);updateHud();}
-function draw(){ctx.clearRect(0,0,W,H);const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#211a2b');g.addColorStop(.58,'#1a1424');g.addColorStop(1,'#0c0a12');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);const lane=W*.74,left=(W-lane)/2;ctx.fillStyle='#211a2b';ctx.fillRect(left,0,lane,H);ctx.fillStyle='#30243a';ctx.fillRect(left+5,0,lane-10,H);if(terrain.complete&&terrain.naturalWidth){ctx.save();ctx.beginPath();ctx.rect(left+5,0,lane-10,H);ctx.clip();const tileH=terrain.naturalHeight,offset=(elapsed*24)%tileH;for(let ty=-offset;ty<H;ty+=tileH)ctx.drawImage(terrain,left+5,ty,lane-10,tileH);ctx.fillStyle='#160f2090';ctx.fillRect(left+5,0,lane-10,H);ctx.restore();}ctx.strokeStyle='#8e719522';ctx.setLineDash([10,13]);ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);for(let y=-80+scroll;y<H;y+=80){ctx.strokeStyle='#d0b77d13';ctx.beginPath();ctx.moveTo(left+13,y);ctx.lineTo(left+lane-13,y);ctx.stroke();}for(let i=0;i<18;i++){const y=(i*113+scroll*1.6)%(H+30)-15,x=left+18+((i*47)%Math.max(30,lane-36));ctx.globalAlpha=.12;ctx.fillStyle=i%2?'#c8a4d2':'#d4c49a';ctx.beginPath();ctx.ellipse(x,y,2,5,(i%3)*.4,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+function draw(){ctx.clearRect(0,0,W,H);if(battlefield.complete&&battlefield.naturalWidth){const scale=Math.max(W/battlefield.naturalWidth,H/battlefield.naturalHeight),bw=battlefield.naturalWidth*scale,bh=battlefield.naturalHeight*scale;ctx.drawImage(battlefield,(W-bw)/2,(H-bh)/2,bw,bh);}else{const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#353943');g.addColorStop(1,'#17151b');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}ctx.fillStyle='#100d1840';ctx.fillRect(0,0,W,H);for(let i=0;i<11;i++){const y=(i*97+scroll*1.25)%(H+24)-12,x=(i*71+Math.sin(i*5.1)*W*.19+W*.16)%W;ctx.globalAlpha=.2;ctx.fillStyle=i%2?'#d6c7a8':'#bd8b64';ctx.beginPath();ctx.ellipse(x,y,1.2,3.2,(i%3)*.4,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
 crates.forEach(drawCrate);allies.forEach(a=>drawActor(a,a.symbol,true));enemies.forEach(e=>drawActor(e,e.symbol,false));drawActor(player,'',true);for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/.7);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;for(const b of bolts){ctx.strokeStyle=b.color;ctx.lineWidth=3;ctx.shadowColor=b.color;ctx.shadowBlur=12;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.target.x,b.target.y);ctx.stroke();ctx.shadowBlur=0;}if(goal){ctx.strokeStyle='#d6b47799';ctx.beginPath();ctx.arc(goal.x,goal.y,12+Math.sin(elapsed*5)*2,0,Math.PI*2);ctx.stroke();}const v=ctx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.78);v.addColorStop(.45,'#00000000');v.addColorStop(1,'#00000080');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);}
 function drawActor(a,sym,ally){
 const fallback=()=>{ctx.fillStyle=a.color||'#9477ae';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=(a.r+5)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(sym||'✦',a.x,a.y);};
-const scale=a.boss?1.22:(a.sprite===1?1.04:(a.sprite===0?.9:.82)),w=58*scale,h=76*scale;
+const scale=a.hero?1.32:(a.boss?1.55:1),w=34*scale,h=48*scale;
 ctx.save();ctx.globalAlpha=.28;ctx.fillStyle=a.color||'#b79bd2';ctx.beginPath();ctx.ellipse(a.x,a.y+5,w*.25,5,0,0,Math.PI*2);ctx.fill();ctx.restore();
 if(a.slow>0){ctx.save();ctx.strokeStyle='#8ce9ed';ctx.lineWidth=2;ctx.beginPath();ctx.arc(a.x,a.y,a.r+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
 if(sprites.complete&&sprites.naturalWidth){const col=a.sprite%4,row=Math.floor(a.sprite/4);ctx.save();if(a.invuln>0)ctx.globalAlpha=.45;ctx.drawImage(sprites,col*384,row*512,384,512,a.x-w/2,a.y-h*.58,w,h);ctx.restore();}else fallback();
@@ -73,6 +74,6 @@ function endGame(win){ended=true;running=false;$('overlay').style.display='flex'
 function point(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 canvas.addEventListener('pointerdown',e=>{if(!running||ended)return;e.preventDefault();dragging=true;canvas.setPointerCapture(e.pointerId);const p=point(e),box=crates.find(c=>dist(c,p)<c.r+12);if(box){breakCrate(box);return;}const t=[...enemies].reverse().find(a=>dist(a,p)<a.r+18);if(t){focus=t;toast(t.boss?'Focus on the Bellkeeper':'Wraith targeted');return;}focus=null;goal={x:clamp(p.x,24,W-24),y:clamp(p.y,110,H-176)};});
 canvas.addEventListener('pointermove',e=>{if(!dragging||!running)return;const p=point(e);if(p.y<H-165)goal={x:clamp(p.x,24,W-24),y:clamp(p.y,110,H-176)};});canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('pointercancel',()=>dragging=false);
-$('start').addEventListener('click',reset);window.addEventListener('resize',resize);buildDeck();resize();player={x:W/2,y:H*.68,r:13,hp:100,maxHp:100,mana:60,maxMana:100,speed:152,invuln:0,shot:0,sprite:0};updateHud();requestAnimationFrame(function frame(t){const dt=Math.min(.035,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(frame);});
+$('start').addEventListener('click',reset);window.addEventListener('resize',resize);buildDeck();resize();player={x:W/2,y:H*.68,r:12,hp:100,maxHp:100,mana:60,maxMana:100,speed:152,invuln:0,shot:0,sprite:2,hero:true};updateHud();requestAnimationFrame(function frame(t){const dt=Math.min(.035,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(frame);});
 })();
 </script></body></html>
