@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#100e18">
+<title>Véu das Cinzas — Protótipo</title>
+<style>
+:root{color-scheme:dark;--bg:#100e18;--panel:#211b2b;--gold:#d6b477;--muted:#b6aebe;--red:#d85c65;--teal:#78c8bd}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f4edf5;touch-action:none}
+#game{position:relative;width:100%;height:100%;height:100dvh;overflow:hidden;background:radial-gradient(ellipse at 50% 25%,#30223b 0%,#171320 45%,#0d0b12 100%)}
+canvas{display:block;width:100%;height:100%;position:absolute;inset:0}
+.hud{position:absolute;z-index:3;left:12px;right:12px;top:max(10px,env(safe-area-inset-top));pointer-events:none}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:900;letter-spacing:.12em;font-size:12px;color:var(--gold);text-shadow:0 2px 8px #000}
+.pill{background:#100d18d9;border:1px solid #8e779b66;border-radius:999px;padding:6px 10px;font-size:11px;color:#eee5f2;box-shadow:0 5px 18px #0006}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.barwrap{background:#100d18d9;border:1px solid #8e779b66;border-radius:7px;padding:5px 7px}
+.barlabel{display:flex;justify-content:space-between;font-size:10px;color:#e8ddeb;margin-bottom:4px}
+.bar{height:7px;background:#382e40;border-radius:6px;overflow:hidden}
+.fill{height:100%;width:100%;transition:width .15s linear}
+#hpFill{background:linear-gradient(90deg,#8e263c,#e35c6a)}#manaFill{background:linear-gradient(90deg,#326c9e,#69d0d1)}
+.objective{margin-top:7px;text-align:center;font-size:10px;color:#d2c4d8;text-shadow:0 2px 4px #000}
+.controls{position:absolute;z-index:4;inset:0;pointer-events:none}
+.joy{position:absolute;left:18px;bottom:calc(126px + env(safe-area-inset-bottom));width:112px;height:112px;border:1px solid #c6b1d344;border-radius:50%;background:#241c2b99;pointer-events:auto;touch-action:none;box-shadow:inset 0 0 20px #0007}
+.joy:after{content:"";position:absolute;inset:27px;border:1px solid #b8a1c533;border-radius:50%}
+.stick{position:absolute;width:43px;height:43px;left:34px;top:34px;border-radius:50%;background:linear-gradient(145deg,#8e799d,#493951);border:1px solid #d6c0df88;box-shadow:0 3px 12px #0008;z-index:1}
+.cards{position:absolute;left:10px;right:10px;bottom:max(12px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;pointer-events:auto}
+.card{height:100px;border:1px solid #927c9d;border-radius:10px;background:linear-gradient(155deg,#33263fef,#17121ff5);color:#fff;position:relative;padding:8px 5px 7px;text-align:center;box-shadow:0 6px 16px #0008;touch-action:manipulation}
+.card:active{transform:scale(.97)}.card:disabled{opacity:.45;filter:grayscale(.7)}
+.card .symbol{font-size:28px;line-height:32px;filter:drop-shadow(0 2px 5px #000)}
+.card .name{font-weight:800;font-size:11px;margin-top:3px}.card .cost{position:absolute;top:5px;right:6px;border-radius:10px;background:#215f80;padding:2px 5px;font-size:10px;font-weight:800}
+.card .desc{font-size:9px;color:#c9bacf;margin-top:2px}
+.hint{position:absolute;z-index:3;bottom:113px;left:0;right:0;text-align:center;font-size:10px;color:#c9b9ce;text-shadow:0 2px 5px #000;pointer-events:none}
+.action{position:absolute;right:20px;bottom:calc(139px + env(safe-area-inset-bottom));width:66px;height:66px;border-radius:50%;pointer-events:auto;touch-action:manipulation;border:2px solid #d6b477aa;background:radial-gradient(circle at 35% 25%,#986c91,#39213f);color:#fff;font-size:23px;box-shadow:0 0 20px #a94eaf35}
+.action small{display:block;font-size:9px;font-weight:800;letter-spacing:.05em}
+#toast{position:absolute;z-index:8;top:36%;left:50%;transform:translate(-50%,-50%);background:#100d18eF;border:1px solid #c3a5d4;border-radius:10px;padding:10px 15px;font-size:12px;text-align:center;max-width:80%;opacity:0;transition:opacity .2s;pointer-events:none}
+#overlay{position:absolute;z-index:10;inset:0;background:#0d0a13eF;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+.modal{max-width:340px;border:1px solid #8c719c;border-radius:18px;padding:24px 20px;background:linear-gradient(145deg,#2c2037,#14101b);box-shadow:0 20px 70px #000b}
+.modal h1{font-size:23px;letter-spacing:.08em;color:var(--gold);margin:0 0 7px}.modal p{font-size:13px;line-height:1.55;color:#d7cbdc}
+.start{border:0;border-radius:9px;background:linear-gradient(90deg,#9b6e9d,#c9a96f);color:#180f1b;font-weight:900;padding:13px 22px;font-size:13px;letter-spacing:.06em;margin-top:8px}
+.legend{font-size:10px;color:#a99aad;margin-top:13px}
+@media(min-width:600px){#game{max-width:440px;margin:auto;border-left:1px solid #382b40;border-right:1px solid #382b40}.hud{left:16px;right:16px}}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="world" aria-label="Campo de batalha"></canvas>
+<div class="hud">
+ <div class="topline"><div class="brand">✦ VÉU DAS CINZAS</div><div class="pill" id="wave">ONDA 1 · 0/8</div><div class="pill" id="souls">◇ 0 almas</div></div>
+ <div class="bars">
+  <div class="barwrap"><div class="barlabel"><span>VITALIDADE</span><span id="hpText">100 / 100</span></div><div class="bar"><div class="fill" id="hpFill"></div></div></div>
+  <div class="barwrap"><div class="barlabel"><span>MANA</span><span id="manaText">70 / 100</span></div><div class="bar"><div class="fill" id="manaFill"></div></div></div>
+ </div>
+ <div class="objective" id="objective">Derrota os espectros. Sobrevive à noite.</div>
+</div>
+<div class="controls">
+ <div class="joy" id="joy"><div class="stick" id="stick"></div></div>
+ <button class="action" id="bolt" aria-label="Lançar feitiço">✧<small>RAIO</small></button>
+ <div class="hint">MOVE-TE COM O JOYSTICK · INVOCA ALIADOS COM AS CARTAS</div>
+ <div class="cards">
+  <button class="card" id="cardSkeleton"><span class="cost">25 ◈</span><div class="symbol">☠</div><div class="name">Esqueleto</div><div class="desc">Melee · equilibrado</div></button>
+  <button class="card" id="cardArcher"><span class="cost">30 ◈</span><div class="symbol">➶</div><div class="name">Arqueiro</div><div class="desc">Ataque à distância</div></button>
+  <button class="card" id="cardImp"><span class="cost">40 ◈</span><div class="symbol">♆</div><div class="name">Diabrete</div><div class="desc">Rápido · feroz</div></button>
+ </div>
+</div>
+<div id="toast"></div>
+<div id="overlay"><div class="modal"><h1>VÉU DAS CINZAS</h1><p>As campânulas tocaram sob a terra. Sobrevive às vagas de espectros, invoca criaturas com mana e lança raios contra os inimigos.</p><p><b>Controlos:</b> joystick para mover · cartas para invocar · botão ✧ para lançar um raio no inimigo mais próximo.</p><button class="start" id="start">ENTRAR NA ESCURIDÃO</button><div class="legend">PROTÓTIPO JOGÁVEL · 01</div></div></div>
+</div>
+<script>
+(() => {
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+let W=0,H=0,dpr=1, last=0, running=false, ended=false, elapsed=0, spawnTimer=0, kills=0, wave=1, souls=0;
+let player, allies=[], enemies=[], particles=[], bolts=[], decor=[];
+const input={x:0,y:0,active:false};
+const cardDefs={skeleton:{cost:25,hp:60,damage:10,range:32,speed:57,rate:.8,color:'#d8c9d5',symbol:'☠'},archer:{cost:30,hp:36,damage:8,range:155,speed:48,rate:1.05,color:'#a4d6c8',symbol:'➶'},imp:{cost:40,hp:44,damage:16,range:39,speed:83,rate:.55,color:'#e78c77',symbol:'♆'}};
+function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);if(player){player.x=Math.max(24,Math.min(W-24,player.x));player.y=Math.max(100,Math.min(H-190,player.y));}makeDecor();}
+function makeDecor(){decor=[];for(let i=0;i<65;i++)decor.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+.4,a:Math.random()*.28+.04});}
+function reset(){player={x:W/2,y:H*.68,r:13,hp:100,maxHp:100,mana:70,maxMana:100,speed:155,invuln:0,attackCd:0};allies=[];enemies=[];particles=[];bolts=[];elapsed=0;spawnTimer=.6;kills=0;wave=1;souls=0;ended=false;running=true;toast('Os espectros aproximam-se…');}
+function toast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1500);}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function spawnEnemy(){const edge=Math.floor(Math.random()*4);let x,y;if(edge===0){x=Math.random()*W;y=95;}else if(edge===1){x=W-10;y=100+Math.random()*(H*.55);}else if(edge===2){x=Math.random()*W;y=H*.55;}else{x=10;y=100+Math.random()*(H*.55);}
+ const tough=Math.random()<Math.min(.3,.08+wave*.025);enemies.push({x,y,r:tough?15:11,hp:tough?48+wave*4:27+wave*2,maxHp:tough?48+wave*4:27+wave*2,damage:tough?13:7,speed:tough?25+wave:34+wave*1.2,attackCd:Math.random(),color:tough?'#bd687c':'#8171a0',tough});}
+function summon(type){if(!running||ended)return;const d=cardDefs[type];if(player.mana<d.cost){toast('Mana insuficiente');return;}if(allies.length>=8){toast('Limite de 8 aliados');return;}player.mana-=d.cost;allies.push({type,x:player.x+(Math.random()-.5)*30,y:player.y+25+(Math.random()-.5)*20,r:type==='imp'?9:10,hp:d.hp,maxHp:d.hp,damage:d.damage,range:d.range,speed:d.speed,rate:d.rate,cd:.3,color:d.color});burst(player.x,player.y,'#b79bd2',10);updateHud();}
+function castBolt(){if(!running||ended)return;if(player.mana<12){toast('Precisas de 12 de mana');return;}player.mana-=12;let target=null,best=Infinity;for(const e of enemies){const d=dist(player,e);if(d<best){best=d;target=e;}}if(!target){toast('Não há inimigos ao alcance');player.mana=Math.min(player.maxMana,player.mana+12);return;}bolts.push({x:player.x,y:player.y,target,life:.28});target.hp-=31;burst(target.x,target.y,'#8ce9ed',12);if(target.hp<=0)killEnemy(target);updateHud();}
+function burst(x,y,color,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=20+Math.random()*90;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.25+Math.random()*.45,max:.7,color,r:1+Math.random()*2});}}
+function killEnemy(e){const i=enemies.indexOf(e);if(i<0)return;enemies.splice(i,1);kills++;souls+=e.tough?3:1;player.mana=Math.min(player.maxMana,player.mana+(e.tough?9:5));burst(e.x,e.y,e.color,14);if(kills%8===0){wave++;toast('Onda '+wave+' — a noite aprofunda-se');}updateHud();}
+function updateHud(){$('hpText').textContent=Math.ceil(player.hp)+' / '+player.maxHp;$('manaText').textContent=Math.floor(player.mana)+' / '+player.maxMana;$('hpFill').style.width=100*player.hp/player.maxHp+'%';$('manaFill').style.width=100*player.mana/player.maxMana+'%';$('wave').textContent='ONDA '+wave+' · '+(kills%8)+'/8';$('souls').textContent='◇ '+souls+' almas';$('objective').textContent='Espectros derrotados: '+kills+' · Aliados: '+allies.length;}
+function update(dt){if(!running||ended)return;elapsed+=dt;player.mana=Math.min(player.maxMana,player.mana+5.5*dt);player.invuln=Math.max(0,player.invuln-dt);
+ let vx=input.x,vy=input.y;const len=Math.hypot(vx,vy);if(len>1){vx/=len;vy/=len;}player.x=clamp(player.x+vx*player.speed*dt,18,W-18);player.y=clamp(player.y+vy*player.speed*dt,95,H-175);
+ spawnTimer-=dt;if(spawnTimer<=0&&enemies.length<Math.min(13,4+wave*2)){spawnEnemy();spawnTimer=Math.max(.65,2.1-wave*.1);}
+ for(const a of allies){a.cd-=dt;let target=null,best=Infinity;for(const e of enemies){const d=dist(a,e);if(d<best){best=d;target=e;}}if(target){if(best>a.range-5){const d=Math.max(1,best);a.x+=(target.x-a.x)/d*a.speed*dt;a.y+=(target.y-a.y)/d*a.speed*dt;}else if(a.cd<=0){target.hp-=a.damage;a.cd=a.rate;burst(target.x,target.y,a.color,3);if(target.hp<=0)killEnemy(target);}}}
+ for(const e of [...enemies]){let target=player,bd=dist(e,player);for(const a of allies){const d=dist(e,a);if(d<bd+15){bd=d;target=a;}}if(bd>e.r+target.r+3){e.x+=(target.x-e.x)/Math.max(1,bd)*e.speed*dt;e.y+=(target.y-e.y)/Math.max(1,bd)*e.speed*dt;}else{e.attackCd-=dt;if(e.attackCd<=0){target.hp-=e.damage;e.attackCd=1.0;burst(target.x,target.y,'#d85c65',4);if(target===player)player.invuln=.22;if(target.hp<=0){if(target===player){endGame(false);return;}const idx=allies.indexOf(target);if(idx>=0)allies.splice(idx,1);}}}}
+ for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy*=.96;p.life-=dt;}particles=particles.filter(p=>p.life>0);
+ bolts.forEach(b=>b.life-=dt);bolts=bolts.filter(b=>b.life>0);
+ updateHud();
+}
+function draw(){ctx.clearRect(0,0,W,H);
+ // misty ground
+ const grad=ctx.createRadialGradient(W*.5,H*.42,5,W*.5,H*.45,Math.max(W,H)*.75);grad.addColorStop(0,'#302238');grad.addColorStop(.6,'#1b1525');grad.addColorStop(1,'#0b0a11');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ ctx.save();for(const d of decor){ctx.globalAlpha=d.a;ctx.fillStyle='#d4bddb';ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();}ctx.restore();
+ // broken rune circle
+ ctx.save();ctx.strokeStyle='#8b6e9940';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(W/2,H*.53,W*.31,H*.19,-.15,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(W/2,H*.53,W*.22,H*.13,-.15,0,Math.PI*2);ctx.stroke();for(let i=0;i<9;i++){const a=i*Math.PI*2/9;ctx.beginPath();ctx.moveTo(W/2+Math.cos(a)*W*.22,H*.53+Math.sin(a)*H*.13);ctx.lineTo(W/2+Math.cos(a)*W*.27,H*.53+Math.sin(a)*H*.16);ctx.stroke();}ctx.restore();
+ for(const a of allies)drawActor(a,a.type==='skeleton'?'☠':a.type==='archer'?'➶':'♆',true);
+ for(const e of enemies)drawActor(e,e.tough?'♜':'♧',false);
+ // player shadow, cloak, face
+ ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(player.x,player.y+12,17,7,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ ctx.save();ctx.translate(player.x,player.y);if(player.invuln>0)ctx.globalAlpha=.55;
+ ctx.fillStyle='#1a1425';ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(13,11);ctx.lineTo(0,7);ctx.lineTo(-13,11);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#8d73a8';ctx.beginPath();ctx.arc(0,-8,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e9d5f0';ctx.beginPath();ctx.arc(2,-9,1.5,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#bda0db';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(10,-3);ctx.lineTo(16,-19);ctx.stroke();ctx.fillStyle='#9be7e7';ctx.beginPath();ctx.arc(16,-20,3,0,Math.PI*2);ctx.fill();ctx.restore();
+ for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/.7);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+ for(const b of bolts){ctx.strokeStyle='#9cfaff';ctx.lineWidth=3;ctx.shadowColor='#72eaff';ctx.shadowBlur=14;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.target.x,b.target.y);ctx.stroke();ctx.shadowBlur=0;}
+ // edge vignette
+ const v=ctx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.8);v.addColorStop(.45,'#00000000');v.addColorStop(1,'#00000088');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+}
+function drawActor(a,symbol,ally){ctx.save();ctx.translate(a.x,a.y);ctx.globalAlpha=ally?1:.95;ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(0,a.r*.8,a.r*1.3,a.r*.55,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=ally?a.color:a.color;ctx.beginPath();ctx.arc(0,0,a.r,0,Math.PI*2);ctx.fill();ctx.strokeStyle=ally?'#f2d8ff99':'#e7b7d199';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle=ally?'#17101d':'#26101c';ctx.font=`${a.r+5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(symbol,0,1);ctx.restore();
+ if(a.hp<a.maxHp){ctx.fillStyle='#2a1c30';ctx.fillRect(a.x-a.r,a.y-a.r-8,a.r*2,3);ctx.fillStyle=ally?'#8bcbb9':'#d65d6d';ctx.fillRect(a.x-a.r,a.y-a.r-8,a.r*2*clamp(a.hp/a.maxHp,0,1),3);}
+}
+function endGame(win){ended=true;running=false;$('overlay').style.display='flex';$('overlay').querySelector('h1').textContent=win?'VITÓRIA':'A ESCURIDÃO VENCEU';$('overlay').querySelector('p').textContent=win?'Sobreviveste à noite. O véu recuou — por agora.':'A tua chama apagou-se, mas a noite ainda pode ser vencida.';$('overlay').querySelectorAll('p')[1].textContent='Espectros derrotados: '+kills+' · Almas recolhidas: '+souls;$('start').textContent='TENTAR NOVAMENTE';}
+function frame(t){const dt=Math.min(.035,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(frame);}
+function setupJoy(){const joy=$('joy'),stick=$('stick');function set(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=37,l=Math.hypot(dx,dy);if(l>max){dx=dx/l*max;dy=dy/l*max;}input.x=dx/max;input.y=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;}function end(){input.x=0;input.y=0;input.active=false;stick.style.transform='translate(0,0)';}joy.addEventListener('pointerdown',e=>{e.preventDefault();input.active=true;joy.setPointerCapture(e.pointerId);set(e)});joy.addEventListener('pointermove',e=>{if(input.active)set(e)});joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);}
+$('cardSkeleton').addEventListener('click',()=>summon('skeleton'));$('cardArcher').addEventListener('click',()=>summon('archer'));$('cardImp').addEventListener('click',()=>summon('imp'));$('bolt').addEventListener('click',castBolt);
+$('start').addEventListener('click',()=>{$('overlay').style.display='none';reset();});
+window.addEventListener('resize',resize);setupJoy();resize();player={x:W/2,y:H*.68,r:13,hp:100,maxHp:100,mana:70,maxMana:100,speed:155,invuln:0,attackCd:0};updateHud();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
