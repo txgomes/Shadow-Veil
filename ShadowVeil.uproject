@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "",
+	"Category": "Games",
+	"Description": "Shadow Veil — mobile tactical action prototype",
+	"Modules": [
+		{
+			"Name": "ShadowVeil",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

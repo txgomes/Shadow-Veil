@@ -1,0 +1,13 @@
+# Unreal Engine generated files
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+.idea/
+*.sln
+*.xcodeproj/
+*.xcworkspace/
+
+# Local reference footage is intentionally kept out of version control.
+*.mp4
