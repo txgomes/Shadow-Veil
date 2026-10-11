@@ -13,8 +13,13 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private readonly List<Unit> allies = new List<Unit>();
     private readonly List<Unit> enemies = new List<Unit>();
     private readonly List<Material> materials = new List<Material>();
+    private readonly List<Button> cardButtons = new List<Button>();
+    private readonly List<int> cardCosts = new List<int>();
+    private readonly Dictionary<Collider, Unit> unitsByCollider = new Dictionary<Collider, Unit>();
+    private readonly Dictionary<Collider, float> manaPickups = new Dictionary<Collider, float>();
 
     private Unit hero;
+    private Unit selectedEnemy;
     private Camera battleCamera;
     private Canvas canvas;
     private Mesh pineConeMesh;
@@ -27,6 +32,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private float mana = 12f;
     private float timeLeft = 210f;
     private float spawnClock = 1.2f;
+    private float pickupClock = 4f;
     private float walkPhase;
     private int kills;
     private int wave = 1;
@@ -43,6 +49,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         public Transform rightLeg;
         public Transform leftArm;
         public Transform rightArm;
+        public GameObject selectionDisc;
         public Image healthFill;
         public bool isEnemy;
         public bool isHero;
@@ -54,6 +61,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         public float damage;
         public float cooldown;
         public float attackRate;
+        public float healCooldown;
         public float phase;
     }
 
@@ -74,7 +82,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         if (ended) return;
         float dt = Time.deltaTime;
         timeLeft -= dt;
-        mana = Mathf.Min(26f, mana + 1.8f * dt);
+        mana = Mathf.Min(26f, mana + 0.65f * dt);
         ReadMovementInput();
         MoveHero(dt);
         UpdateCamera(dt);
@@ -82,6 +90,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         UpdateUnits(dt);
         HeroAttack(dt);
         SpawnEnemies(dt);
+        SpawnManaPickups(dt);
         UpdateHud();
         if (hero.hp <= 0f || timeLeft <= 0f) EndGame(false);
     }
@@ -189,21 +198,23 @@ public sealed class ShadowVeilGame : MonoBehaviour
             events.name = "EventSystem";
         }
 
-        Panel("Top HUD", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(-16f, -98f), new Vector2(-16f, -8f), new Color(0.05f, 0.045f, 0.055f, 0.78f));
-        AddText("brand", "SHADOW VEIL", 18, TextAnchor.MiddleLeft, new Vector2(0.04f, 0.80f), new Vector2(0.66f, 1f), new Color(0.87f, 0.72f, 0.48f));
-        timerText = AddText("timer", "03:30", 16, TextAnchor.MiddleRight, new Vector2(0.68f, 0.80f), new Vector2(0.96f, 1f), Color.white);
-        healthText = AddText("health", "HERO  100 / 100", 12, TextAnchor.MiddleLeft, new Vector2(0.04f, 0.40f), new Vector2(0.48f, 0.68f), Color.white);
-        manaText = AddText("mana", "MANA  12 / 26", 12, TextAnchor.MiddleLeft, new Vector2(0.53f, 0.40f), new Vector2(0.96f, 0.68f), new Color(0.87f, 0.67f, 1f));
-        healthFill = AddBar("Health fill", new Vector2(0.04f, 0.18f), new Vector2(0.48f, 0.32f), new Color(0.77f, 0.22f, 0.30f));
-        manaFill = AddBar("Mana fill", new Vector2(0.53f, 0.18f), new Vector2(0.96f, 0.32f), new Color(0.62f, 0.20f, 0.80f));
-        objectiveText = AddText("objective", "WRAITHS: 0 / 15   ·   ALLIES: 0", 13, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.69f), new Vector2(0.92f, 0.78f), Color.white);
+        Panel("Top HUD", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(-16f, -148f), new Vector2(-16f, -8f), new Color(0.05f, 0.045f, 0.055f, 0.82f));
+        AddText("brand", "SHADOW VEIL", 18, TextAnchor.MiddleLeft, new Vector2(0.04f, 0.953f), new Vector2(0.66f, 0.99f), new Color(0.87f, 0.72f, 0.48f));
+        timerText = AddText("timer", "03:30", 16, TextAnchor.MiddleRight, new Vector2(0.68f, 0.953f), new Vector2(0.96f, 0.99f), Color.white);
+        healthText = AddText("health", "HERO  100 / 100", 12, TextAnchor.MiddleLeft, new Vector2(0.04f, 0.905f), new Vector2(0.48f, 0.94f), Color.white);
+        manaText = AddText("mana", "MANA  12 / 26", 12, TextAnchor.MiddleLeft, new Vector2(0.53f, 0.905f), new Vector2(0.96f, 0.94f), new Color(0.87f, 0.67f, 1f));
+        healthFill = AddBar("Health fill", new Vector2(0.04f, 0.89f), new Vector2(0.48f, 0.901f), new Color(0.77f, 0.22f, 0.30f));
+        manaFill = AddBar("Mana fill", new Vector2(0.53f, 0.89f), new Vector2(0.96f, 0.901f), new Color(0.62f, 0.20f, 0.80f));
+        objectiveText = AddText("objective", "WRAITHS: 0 / 15   ·   ALLIES: 0", 12, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.861f), new Vector2(0.92f, 0.882f), Color.white);
+        AddText("controls", "DRAG TO MOVE   ·   TAP ENEMIES TO TARGET   ·   COLLECT URNS", 9, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.835f), new Vector2(0.96f, 0.854f), new Color(0.77f, 0.72f, 0.63f));
 
         Panel("Card dock", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-10f, 8f), new Vector2(10f, 118f), new Color(0.045f, 0.04f, 0.055f, 0.95f));
-        AddCard("GRAVEGUARD", "5 MANA\nMELEE", 0, new Color(0.46f, 0.43f, 0.48f), () => Deploy("tank"));
-        AddCard("ASHEN ARCHER", "8 MANA\nRANGED", 1, new Color(0.34f, 0.48f, 0.43f), () => Deploy("ranged"));
-        AddCard("GLOAM IMP", "5 MANA\nFAST", 2, new Color(0.58f, 0.34f, 0.30f), () => Deploy("assault"));
-        AddCard("CINDERBURST", "2 MANA\nSPELL", 3, new Color(0.63f, 0.30f, 0.22f), CastCinderburst);
-        AddCard("RIME VEIL", "5 MANA\nSPELL", 4, new Color(0.30f, 0.46f, 0.55f), CastRimeVeil);
+        AddCard("GRAVEGUARD", "MELEE", 5, 0, new Color(0.46f, 0.43f, 0.48f), () => Deploy("tank"));
+        AddCard("SKELETON ARCHER", "RANGED", 5, 1, new Color(0.34f, 0.48f, 0.43f), () => Deploy("ranged"));
+        AddCard("TROLL HEALER", "SUPPORT", 5, 2, new Color(0.32f, 0.50f, 0.40f), () => Deploy("healer"));
+        AddCard("GLOAM IMP", "ASSAULT", 9, 3, new Color(0.58f, 0.34f, 0.30f), () => Deploy("assault"));
+        AddCard("CINDERBURST", "SPELL", 2, 4, new Color(0.63f, 0.30f, 0.22f), CastCinderburst);
+        AddCard("RIME VEIL", "HEAL", 5, 5, new Color(0.30f, 0.46f, 0.55f), CastRimeVeil);
     }
 
     private void ReadMovementInput()
@@ -214,7 +225,11 @@ public sealed class ShadowVeilGame : MonoBehaviour
             {
                 Touch touch = Input.GetTouch(i);
                 if (touch.phase == TouchPhase.Began)
-                    dragging = EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject(touch.fingerId);
+                {
+                    bool overHud = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(touch.fingerId);
+                    dragging = !overHud && !HandleWorldTap(touch.position);
+                    if (dragging) SetDestination(touch.position);
+                }
                 if (dragging && (touch.phase == TouchPhase.Began || touch.phase == TouchPhase.Moved || touch.phase == TouchPhase.Stationary))
                     SetDestination(touch.position);
                 if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) dragging = false;
@@ -222,7 +237,12 @@ public sealed class ShadowVeilGame : MonoBehaviour
         }
         else
         {
-            if (Input.GetMouseButtonDown(0)) dragging = EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject();
+            if (Input.GetMouseButtonDown(0))
+            {
+                bool overHud = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                dragging = !overHud && !HandleWorldTap(Input.mousePosition);
+                if (dragging) SetDestination(Input.mousePosition);
+            }
             if (dragging && (Input.GetMouseButton(0) || Input.GetMouseButtonDown(0))) SetDestination(Input.mousePosition);
             if (Input.GetMouseButtonUp(0)) dragging = false;
         }
@@ -289,6 +309,67 @@ public sealed class ShadowVeilGame : MonoBehaviour
         spawnClock = Mathf.Max(1.2f, 3.2f - wave * 0.35f);
     }
 
+    private bool HandleWorldTap(Vector2 screenPosition)
+    {
+        Ray ray = battleCamera.ScreenPointToRay(screenPosition);
+        RaycastHit[] hits = Physics.RaycastAll(ray, 100f);
+        float nearest = float.MaxValue;
+        Collider tapped = null;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.distance < nearest && (unitsByCollider.ContainsKey(hit.collider) || manaPickups.ContainsKey(hit.collider)))
+            {
+                nearest = hit.distance;
+                tapped = hit.collider;
+            }
+        }
+        if (tapped == null) return false;
+
+        if (manaPickups.TryGetValue(tapped, out float manaValue))
+        {
+            manaPickups.Remove(tapped);
+            mana = Mathf.Min(26f, mana + manaValue);
+            Destroy(tapped.gameObject);
+            return true;
+        }
+
+        if (unitsByCollider.TryGetValue(tapped, out Unit unit) && unit.isEnemy)
+        {
+            if (selectedEnemy != null && selectedEnemy.selectionDisc != null) selectedEnemy.selectionDisc.SetActive(false);
+            selectedEnemy = unit;
+            if (selectedEnemy.selectionDisc != null) selectedEnemy.selectionDisc.SetActive(true);
+            return true;
+        }
+        return false;
+    }
+
+    private void SpawnManaPickups(float dt)
+    {
+        List<Collider> expired = new List<Collider>();
+        foreach (KeyValuePair<Collider, float> pickup in manaPickups)
+            if (pickup.Key == null || pickup.Key.transform.position.z < hero.root.transform.position.z - 4f) expired.Add(pickup.Key);
+        foreach (Collider collider in expired)
+        {
+            manaPickups.Remove(collider);
+            if (collider != null) Destroy(collider.gameObject);
+        }
+
+        pickupClock -= dt;
+        if (pickupClock > 0f || manaPickups.Count >= 4) return;
+        float x = Random.Range(-3.2f, 3.2f);
+        float z = hero.root.transform.position.z + Random.Range(16f, 24f);
+        GameObject jar = new GameObject("Mana urn");
+        jar.transform.position = new Vector3(x, 0f, z);
+        MakePrimitive("Urn body", PrimitiveType.Sphere, jar.transform.position + Vector3.up * 0.52f, new Vector3(0.66f, 0.78f, 0.66f), MakeMaterial(new Color(0.35f, 0.20f, 0.38f)), jar.transform);
+        MakePrimitive("Urn neck", PrimitiveType.Cylinder, jar.transform.position + Vector3.up * 1.08f, new Vector3(0.22f, 0.18f, 0.22f), MakeMetal(new Color(0.54f, 0.40f, 0.28f), 0.5f), jar.transform);
+        MakePrimitive("Mana glow", PrimitiveType.Sphere, jar.transform.position + Vector3.up * 0.75f + Vector3.back * 0.17f, new Vector3(0.22f, 0.24f, 0.12f), MakeGlow(new Color(0.48f, 0.18f, 0.95f), 2f), jar.transform);
+        BoxCollider pickupCollider = jar.AddComponent<BoxCollider>();
+        pickupCollider.center = new Vector3(0f, 0.65f, 0f);
+        pickupCollider.size = new Vector3(0.9f, 1.4f, 0.9f);
+        manaPickups[pickupCollider] = Random.Range(3f, 5f);
+        pickupClock = Random.Range(8f, 12f);
+    }
+
     private void UpdateUnits(float dt)
     {
         for (int i = enemies.Count - 1; i >= 0; i--)
@@ -300,6 +381,9 @@ public sealed class ShadowVeilGame : MonoBehaviour
             if (enemy.hp <= 0f)
             {
                 enemies.RemoveAt(i);
+                Collider collider = enemy.root.GetComponent<Collider>();
+                if (collider != null) unitsByCollider.Remove(collider);
+                if (selectedEnemy == enemy) selectedEnemy = null;
                 Destroy(enemy.root);
                 kills++;
                 mana = Mathf.Min(26f, mana + 4f);
@@ -311,11 +395,17 @@ public sealed class ShadowVeilGame : MonoBehaviour
         for (int i = allies.Count - 1; i >= 0; i--)
         {
             Unit ally = allies[i];
-            Unit target = FindClosestEnemy(ally.root.transform.position);
-            if (target != null) Engage(ally, target, dt);
+            if (ally.role == "healer") SupportAllies(ally, dt);
+            else
+            {
+                Unit target = FindClosestEnemy(ally.root.transform.position);
+                if (target != null) Engage(ally, target, dt);
+            }
             if (ally.hp <= 0f)
             {
                 allies.RemoveAt(i);
+                Collider collider = ally.root.GetComponent<Collider>();
+                if (collider != null) unitsByCollider.Remove(collider);
                 Destroy(ally.root);
             }
         }
@@ -323,7 +413,12 @@ public sealed class ShadowVeilGame : MonoBehaviour
 
     private void HeroAttack(float dt)
     {
-        Unit target = FindClosestEnemy(hero.root.transform.position);
+        if (selectedEnemy != null && (selectedEnemy.hp <= 0f || selectedEnemy.root == null))
+        {
+            if (selectedEnemy.selectionDisc != null) selectedEnemy.selectionDisc.SetActive(false);
+            selectedEnemy = null;
+        }
+        Unit target = selectedEnemy != null ? selectedEnemy : FindClosestEnemy(hero.root.transform.position);
         if (target == null) return;
         Vector3 direction = target.root.transform.position - hero.root.transform.position;
         direction.y = 0f;
@@ -379,6 +474,43 @@ public sealed class ShadowVeilGame : MonoBehaviour
         return push * 1.4f;
     }
 
+    private void SupportAllies(Unit healer, float dt)
+    {
+        Unit target = hero.hp < hero.maxHp ? hero : null;
+        float lowestHealth = target != null ? hero.hp / hero.maxHp : 1f;
+        foreach (Unit ally in allies)
+        {
+            if (ally == healer || ally.hp <= 0f) continue;
+            float healthRatio = ally.hp / ally.maxHp;
+            if (healthRatio < lowestHealth)
+            {
+                target = ally;
+                lowestHealth = healthRatio;
+            }
+        }
+        if (target == null) { Animate(healer, dt, false); return; }
+        Vector3 delta = target.root.transform.position - healer.root.transform.position;
+        delta.y = 0f;
+        if (delta.magnitude > 2.4f)
+        {
+            Vector3 direction = delta.normalized + Separation(healer);
+            direction.y = 0f;
+            direction.Normalize();
+            healer.root.transform.position += direction * healer.speed * dt;
+            healer.root.transform.rotation = Quaternion.RotateTowards(healer.root.transform.rotation, Quaternion.LookRotation(direction), 480f * dt);
+            Animate(healer, dt, true);
+            return;
+        }
+        healer.root.transform.rotation = Quaternion.RotateTowards(healer.root.transform.rotation, Quaternion.LookRotation(delta.normalized), 480f * dt);
+        healer.healCooldown -= dt;
+        if (healer.healCooldown <= 0f)
+        {
+            healer.healCooldown = 1.4f;
+            target.hp = Mathf.Min(target.maxHp, target.hp + 12f);
+        }
+        Animate(healer, dt, false);
+    }
+
     private Unit FindClosestTarget(Vector3 from)
     {
         Unit best = hero;
@@ -407,36 +539,44 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private void Deploy(string role)
     {
         if (ended) return;
-        if (allies.Count >= 7) return;
-        float cost = role == "ranged" ? 8f : 5f;
+        int summonCount = role == "ranged" ? 2 : 1;
+        if (allies.Count + summonCount > 7) return;
+        float cost = role == "assault" ? 9f : 5f;
         if (mana < cost) return;
         mana -= cost;
-        int slot = allies.Count;
-        float side = slot % 2 == 0 ? -1f : 1f;
-        float row = slot / 2;
-        Vector3 position = hero.root.transform.position + new Vector3(side * (1.5f + row * 0.45f), 0f, -1.4f - row * 1.5f);
-        string name = role == "tank" ? "Graveguard" : role == "ranged" ? "Ashen Archer" : "Gloam Imp";
-        Color cloth = role == "tank" ? new Color(0.40f, 0.39f, 0.45f) : role == "ranged" ? new Color(0.26f, 0.48f, 0.40f) : new Color(0.53f, 0.27f, 0.30f);
-        Unit ally = CreateUnit(name, false, false, role, cloth, new Color(0.80f, 0.68f, 0.58f), position);
-        ally.hp = ally.maxHp = role == "tank" ? 110f : role == "ranged" ? 48f : 62f;
-        ally.speed = role == "assault" ? 5.3f : 3.8f;
-        ally.damage = role == "tank" ? 11f : role == "ranged" ? 12f : 18f;
-        ally.range = role == "ranged" ? 8f : 1.7f;
-        ally.attackRate = role == "assault" ? 0.65f : 1f;
-        allies.Add(ally);
+        string name = role == "tank" ? "Graveguard" : role == "ranged" ? "Skeleton Archer" : role == "healer" ? "Troll Healer" : "Gloam Imp";
+        Color cloth = role == "tank" ? new Color(0.40f, 0.39f, 0.45f) : role == "ranged" ? new Color(0.26f, 0.48f, 0.40f) : role == "healer" ? new Color(0.35f, 0.50f, 0.30f) : new Color(0.53f, 0.27f, 0.30f);
+        for (int i = 0; i < summonCount; i++)
+        {
+            int slot = allies.Count;
+            float side = slot % 2 == 0 ? -1f : 1f;
+            float row = slot / 2;
+            Vector3 position = hero.root.transform.position + new Vector3(side * (1.5f + row * 0.45f), 0f, -1.4f - row * 1.5f);
+            Unit ally = CreateUnit(name, false, false, role, cloth, new Color(0.80f, 0.68f, 0.58f), position);
+            ally.hp = ally.maxHp = role == "tank" ? 110f : role == "ranged" ? 48f : role == "healer" ? 72f : 62f;
+            ally.speed = role == "assault" ? 5.3f : 3.8f;
+            ally.damage = role == "tank" ? 11f : role == "ranged" ? 12f : role == "healer" ? 2f : 18f;
+            ally.range = role == "ranged" ? 8f : 1.7f;
+            ally.attackRate = role == "assault" ? 0.65f : 1f;
+            allies.Add(ally);
+        }
     }
 
     private void CastCinderburst()
     {
-        if (ended || mana < 2f) return;
+        Unit focus = selectedEnemy != null ? selectedEnemy : FindClosestEnemy(hero.root.transform.position);
+        if (ended || mana < 2f || focus == null) return;
         mana -= 2f;
-        foreach (Unit enemy in enemies) enemy.hp -= 42f;
+        Vector3 center = focus.root.transform.position;
+        foreach (Unit enemy in enemies)
+            if (Vector3.Distance(enemy.root.transform.position, center) <= 3.5f) enemy.hp -= 42f;
     }
 
     private void CastRimeVeil()
     {
         if (ended || mana < 5f) return;
         mana -= 5f;
+        hero.hp = Mathf.Min(hero.maxHp, hero.hp + 22f);
         foreach (Unit ally in allies) ally.hp = Mathf.Min(ally.maxHp, ally.hp + 22f);
     }
 
@@ -446,6 +586,10 @@ public sealed class ShadowVeilGame : MonoBehaviour
         root.transform.position = position;
         Unit unit = new Unit { root = root, isEnemy = enemy, isHero = isHero, role = role };
         float scale = isHero ? 1f : enemy ? 0.88f : 0.9f;
+        CapsuleCollider unitCollider = root.AddComponent<CapsuleCollider>();
+        unitCollider.center = new Vector3(0f, 1f, 0f);
+        unitCollider.height = 2.1f;
+        unitCollider.radius = 0.48f;
         Material outfit = MakeMaterial(cloth);
         Material skinMaterial = MakeMaterial(skin);
         Material darkLeather = MakeMaterial(new Color(0.12f, 0.10f, 0.12f));
@@ -474,12 +618,18 @@ public sealed class ShadowVeilGame : MonoBehaviour
             MakePrimitive("Bow", PrimitiveType.Cylinder, position + new Vector3(0.56f, 1.13f, 0.03f) * scale, new Vector3(0.055f, 0.64f, 0.055f) * scale, MakeMetal(new Color(0.46f, 0.25f, 0.12f), 0.25f), root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
         }
         MakePrimitive("Ground shadow", PrimitiveType.Cylinder, position + Vector3.up * 0.025f, new Vector3(0.7f, 0.025f, 0.42f) * scale, MakeMaterial(new Color(0.045f, 0.04f, 0.045f)), root.transform);
+        if (enemy)
+        {
+            unit.selectionDisc = MakePrimitive("Target marker", PrimitiveType.Cylinder, position + Vector3.up * 0.055f, new Vector3(1.35f, 0.015f, 1.0f), MakeGlow(new Color(0.95f, 0.22f, 0.16f), 1.2f), root.transform);
+            unit.selectionDisc.SetActive(false);
+        }
         unit.phase = Random.value * 5f;
         unit.speed = 3.5f;
         unit.range = 1.7f;
         unit.damage = 8f;
         unit.attackRate = 1f;
         unit.hp = unit.maxHp = 50f;
+        unitsByCollider[unitCollider] = unit;
         return unit;
     }
 
@@ -623,14 +773,14 @@ public sealed class ShadowVeilGame : MonoBehaviour
         return image;
     }
 
-    private void AddCard(string title, string subtitle, int index, Color color, UnityEngine.Events.UnityAction action)
+    private void AddCard(string title, string subtitle, int cost, int index, Color color, UnityEngine.Events.UnityAction action)
     {
         GameObject card = new GameObject("Card " + title, typeof(RectTransform), typeof(Image), typeof(Button));
         card.transform.SetParent(canvas.transform, false);
         RectTransform rect = card.GetComponent<RectTransform>();
-        float width = 0.18f;
-        float gap = 0.012f;
-        float total = width * 5f + gap * 4f;
+        float width = 0.145f;
+        float gap = 0.01f;
+        float total = width * 6f + gap * 5f;
         float xMin = (1f - total) * 0.5f + index * (width + gap);
         rect.anchorMin = new Vector2(xMin, 0.014f); rect.anchorMax = new Vector2(xMin + width, 0.132f); rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
         Image cardImage = card.GetComponent<Image>();
@@ -640,6 +790,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
         states.highlightedColor = new Color(1f, 0.91f, 0.72f, 1f);
         states.pressedColor = new Color(0.68f, 0.54f, 0.40f, 1f);
         button.colors = states;
+        cardButtons.Add(button);
+        cardCosts.Add(cost);
         GameObject face = new GameObject("Card face", typeof(RectTransform), typeof(Image));
         face.transform.SetParent(card.transform, false);
         RectTransform faceRect = face.GetComponent<RectTransform>(); faceRect.anchorMin = Vector2.zero; faceRect.anchorMax = Vector2.one; faceRect.offsetMin = new Vector2(2f, 2f); faceRect.offsetMax = new Vector2(-2f, -2f);
@@ -650,7 +802,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
         RectTransform crestRect = crest.GetComponent<RectTransform>(); crestRect.anchorMin = new Vector2(0f, 0.88f); crestRect.anchorMax = new Vector2(1f, 1f); crestRect.offsetMin = Vector2.zero; crestRect.offsetMax = Vector2.zero;
         crest.GetComponent<Image>().color = color;
         crest.GetComponent<Image>().raycastTarget = false;
-        Text label = AddText("Card label " + index, title + "\n" + subtitle, 10, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Color.white);
+        string cardTitle = title.Replace(" ", "\n");
+        Text label = AddText("Card label " + index, cardTitle + "\n" + cost + " MANA\n" + subtitle, 8, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Color.white);
         label.transform.SetParent(card.transform, false);
         RectTransform labelRect = label.GetComponent<RectTransform>(); labelRect.anchorMin = Vector2.zero; labelRect.anchorMax = Vector2.one; labelRect.offsetMin = new Vector2(2f, 2f); labelRect.offsetMax = new Vector2(-2f, -2f);
         label.raycastTarget = false;
@@ -664,6 +817,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         healthFill.fillAmount = Mathf.Clamp01(hero.hp / hero.maxHp);
         manaFill.fillAmount = mana / 26f;
         objectiveText.text = "WRAITHS: " + kills + " / 15   ·   ALLIES: " + allies.Count;
+        for (int i = 0; i < cardButtons.Count; i++) cardButtons[i].interactable = mana >= cardCosts[i];
         int seconds = Mathf.CeilToInt(timeLeft);
         timerText.text = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
     }
