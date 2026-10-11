@@ -37,11 +37,19 @@ redBar:mat('Enemy health bar','#da5263','#872635'),
 white:mat('Rune glow','#e8d9bd','#c7ad78')
 };
 const characterMaterials=new Map();
+let heroMaterialCache=null;
 function characterMaterial(index){
  let material=characterMaterials.get(index);if(material)return material;
  const col=index%4,row=Math.floor(index/4),texture=new BABYLON.Texture('assets/character-atlas.png',scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
  texture.uScale=.25;texture.vScale=.5;texture.uOffset=col*.25;texture.vOffset=(1-row)*.5;texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;texture.hasAlpha=true;
  material=new BABYLON.StandardMaterial('character art '+index,scene);material.diffuseTexture=texture;material.opacityTexture=texture;material.useAlphaFromDiffuseTexture=true;material.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;material.disableLighting=true;material.emissiveColor=new BABYLON.Color3(.82,.82,.82);material.specularColor=BABYLON.Color3.Black();material.backFaceCulling=false;material.disableDepthWrite=true;characterMaterials.set(index,material);return material;
+}
+function heroMaterial(){
+ if(heroMaterialCache)return heroMaterialCache;
+ const texture=new BABYLON.Texture('assets/ranger-hero.webp',scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+ texture.hasAlpha=true;
+ heroMaterialCache=new BABYLON.StandardMaterial('Ashen Ranger portrait',scene);heroMaterialCache.diffuseTexture=texture;heroMaterialCache.opacityTexture=texture;heroMaterialCache.useAlphaFromDiffuseTexture=true;heroMaterialCache.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;heroMaterialCache.disableLighting=true;heroMaterialCache.emissiveColor=new BABYLON.Color3(.9,.9,.9);heroMaterialCache.specularColor=BABYLON.Color3.Black();heroMaterialCache.backFaceCulling=false;heroMaterialCache.disableDepthWrite=true;
+ return heroMaterialCache;
 }
 const groundRoot=new BABYLON.TransformNode('endless-trail',scene),groundMeshes=[];
 let trailTexture=new BABYLON.Texture('assets/forest-battlefield.webp',scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
@@ -96,8 +104,8 @@ function limb(parent,name,material,length=.48,radius=.09){const pivot=new BABYLO
 function createActorModel(a){
  const root=new BABYLON.TransformNode('actor '+(a.name||a.role||'hero'),scene);
  const shadow=createPart(root,'CreateSphere','soft ground shadow',{diameter:1,segments:12},mats.shadow);shadow.scaling.set(.5,.045,.29);shadow.position.set(0,.04,0);
- const height=a.boss?2.85:a.role==='assault'?1.45:a.hero?2.28:2.08,width=height*.72;
- const sprite=BABYLON.MeshBuilder.CreatePlane('illustrated character',{width,height},scene);sprite.parent=root;sprite.position.y=height*.51;sprite.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;sprite.material=characterMaterial(a.artIndex??(a.hero?0:1));sprite.isPickable=false;
+ const height=a.boss?2.85:a.role==='assault'?1.45:a.hero?1.82:2.08,width=height*(a.hero?1024/1536:.72);
+ const sprite=BABYLON.MeshBuilder.CreatePlane('illustrated character',{width,height},scene);sprite.parent=root;sprite.position.y=height*.51;sprite.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;sprite.material=a.hero?heroMaterial():characterMaterial(a.artIndex??1);sprite.isPickable=false;
  const barBack=createPart(root,'CreateBox','health bar frame',{width:.68,height:.055,depth:.035},mats.boneShade);barBack.position.set(0,height+.17,0);
  const bar=createPart(root,'CreateBox','health bar fill',{width:.64,height:.033,depth:.04},a.hero||a.role?mats.greenBar:mats.redBar);bar.position.set(0,height+.17,-.025);
  const focusRing=BABYLON.MeshBuilder.CreateTorus('target ring',{diameter:.78,thickness:.035,tessellation:20},scene);focusRing.parent=root;focusRing.position.y=.08;focusRing.rotation.x=Math.PI/2;focusRing.material=ringMat;focusRing.isPickable=false;focusRing.isVisible=false;
