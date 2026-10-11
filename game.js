@@ -101,7 +101,7 @@ function createActorModel(a){
  const barBack=createPart(root,'CreateBox','health bar frame',{width:.68,height:.055,depth:.035},mats.boneShade);barBack.position.set(0,height+.17,0);
  const bar=createPart(root,'CreateBox','health bar fill',{width:.64,height:.033,depth:.04},a.hero||a.role?mats.greenBar:mats.redBar);bar.position.set(0,height+.17,-.025);
  const focusRing=BABYLON.MeshBuilder.CreateTorus('target ring',{diameter:.78,thickness:.035,tessellation:20},scene);focusRing.parent=root;focusRing.position.y=.08;focusRing.rotation.x=Math.PI/2;focusRing.material=ringMat;focusRing.isPickable=false;focusRing.isVisible=false;
- return{root,sprite,shadow,bar,focusRing,height,width,phase:Math.random()*5,lastX:a.x,lastY:a.y,walkBlend:0};
+ return{root,sprite,shadow,bar,focusRing,height,width,phase:Math.random()*5,lastX:a.x,lastY:a.y,walkBlend:0,stepTimer:Math.random()*.12};
 }
 function ensureActor(a){let v=actorViews.get(a);if(!v){v=createActorModel(a);actorViews.set(a,v);}return v;}
 function createCrateModel(c){const root=new BABYLON.TransformNode('reliquary '+c.type,scene),m=c.type==='health'?mats.health:c.type==='mana'?mats.mana:mats.soul;
@@ -118,14 +118,17 @@ groundMeshes.forEach((tile,i)=>{tile.position.z=(i-2)*12;});
  const actors=[player,...allies,...enemies].filter(Boolean),activeActors=new Set(actors);
  for(const [a,v] of actorViews)if(!activeActors.has(a)){v.root.dispose(false,false);actorViews.delete(a);}
  for(const a of actors){const v=ensureActor(a),pos=to3(a.x,a.y,0);v.root.position.x=pos.x;v.root.position.z=pos.z;v.root.position.y=.03;
-  const dx=a.x-v.lastX,dy=a.y-v.lastY,moved=Math.hypot(dx,dy)>.12;v.lastX=a.x;v.lastY=a.y;v.walkBlend+=(clamp((moved||a.walking)?1:0,0,1)-v.walkBlend)*Math.min(1,dt*8);v.phase+=dt*(moved||a.walking?11:2.5);
+  const dx=a.x-v.lastX,dy=a.y-v.lastY,moved=Math.hypot(dx,dy)>.12,isMoving=moved||a.walking;v.lastX=a.x;v.lastY=a.y;v.walkBlend+=(clamp(isMoving?1:0,0,1)-v.walkBlend)*Math.min(1,dt*8);v.phase+=dt*(isMoving?11:2.5);
   const attack=a.attackPulse>0?Math.sin((.3-a.attackPulse)*Math.PI/.3):0;
   if(a.attackPulse>0)a.attackPulse=Math.max(0,a.attackPulse-dt);
-  const summon=clamp(1-(a.summonTime||0)/.42,0,1),pop=.28+.72*summon*summon*(3-2*summon),stride=Math.sin(v.phase),hop=a.role==='assault'?.19:.12;
+  const summon=clamp(1-(a.summonTime||0)/.42,0,1),pop=.28+.72*summon*summon*(3-2*summon),stride=Math.sin(v.phase),hop=a.role==='assault'?.3:.22;
   a.summonTime=Math.max(0,(a.summonTime||0)-dt);v.sprite.visibility=.35+.65*summon;
+  const lean=clamp(Math.atan2(dx,Math.max(14,Math.abs(dy)))*.18,-.25,.25);
+  v.sprite.position.x=Math.sin(v.phase)*.06*v.walkBlend;
   v.sprite.position.y=v.height*.51*pop+Math.abs(stride)*hop*v.walkBlend+Math.sin(v.phase)*(.018+(a.role==='healer'?.05:0))*(1-v.walkBlend)+attack*.1;
-  v.sprite.rotation.z=clamp(-dx/140,-.17,.17)*v.walkBlend+Math.sin(v.phase)*(.015+(a.role==='healer'?.025:0))*(1-v.walkBlend)+attack*.15;
-  v.sprite.scaling.x=pop*(1+attack*.11+Math.abs(stride)*.025*v.walkBlend);v.sprite.scaling.y=pop*(1-attack*.055-Math.abs(stride)*.035*v.walkBlend);v.shadow.scaling.x=.5+v.walkBlend*.07;v.shadow.scaling.z=.29+v.walkBlend*.055;
+  v.sprite.rotation.z=lean*v.walkBlend+Math.sin(v.phase)*(.085*v.walkBlend+(a.role==='healer'?.025:0)*(1-v.walkBlend))+attack*.2;
+  v.sprite.scaling.x=pop*(1+attack*.12+Math.abs(stride)*.055*v.walkBlend);v.sprite.scaling.y=pop*(1-attack*.07-Math.max(0,-stride)*.065*v.walkBlend);v.shadow.scaling.x=.5+v.walkBlend*.12;v.shadow.scaling.z=.29+v.walkBlend*.08;
+  v.stepTimer-=dt;if(isMoving&&v.stepTimer<=0){for(let puff=0;puff<2;puff++)particles.push({x:a.x+(Math.random()-.5)*14,y:a.y+a.r*.35,vx:(Math.random()-.5)*24,vy:-8-Math.random()*12,life:.22+Math.random()*.12,color:'#9b8a72',r:10+Math.random()*6});v.stepTimer=.27;}
   v.root.position.y=a.invuln>0&&Math.floor(elapsed*18)%2?.1:.03;
   v.bar.scaling.x=Math.max(.02,.64*clamp(a.hp/a.maxHp,0,1));v.bar.position.x=-(.64-v.bar.scaling.x)*.5;
   v.focusRing.isVisible=focus===a;v.focusRing.rotation.z=elapsed*.65;
