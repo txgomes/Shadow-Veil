@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>Runtime-built vertical battlefield for the first native Unity slice.</summary>
 public sealed class ShadowVeilGame : MonoBehaviour
 {
-    private const float LaneWidth = 15f;
+    private const float LaneWidth = 8.8f;
     private const float TileLength = 18f;
     private const int TileCount = 9;
     private readonly List<GameObject> floorTiles = new List<GameObject>();
@@ -17,6 +17,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private Unit hero;
     private Camera battleCamera;
     private Canvas canvas;
+    private Mesh pineConeMesh;
     private Text healthText;
     private Text manaText;
     private Text objectiveText;
@@ -87,40 +88,76 @@ public sealed class ShadowVeilGame : MonoBehaviour
 
     private void BuildWorld()
     {
-        RenderSettings.ambientLight = new Color(0.34f, 0.33f, 0.37f);
+        RenderSettings.ambientLight = new Color(0.24f, 0.27f, 0.34f);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.fog = true;
-        RenderSettings.fogColor = new Color(0.10f, 0.12f, 0.12f);
+        RenderSettings.fogColor = new Color(0.075f, 0.095f, 0.12f);
         RenderSettings.fogMode = FogMode.Linear;
-        RenderSettings.fogStartDistance = 30f;
-        RenderSettings.fogEndDistance = 105f;
+        RenderSettings.fogStartDistance = 36f;
+        RenderSettings.fogEndDistance = 92f;
 
         GameObject moon = new GameObject("Moonlight");
         Light sun = moon.AddComponent<Light>();
         sun.type = LightType.Directional;
-        sun.color = new Color(0.68f, 0.72f, 0.82f);
-        sun.intensity = 1.05f;
-        moon.transform.rotation = Quaternion.Euler(48f, -30f, 0f);
+        sun.color = new Color(0.63f, 0.72f, 0.92f);
+        sun.intensity = 1.35f;
+        sun.shadows = LightShadows.Soft;
+        moon.transform.rotation = Quaternion.Euler(38f, -32f, 0f);
 
-        Material earth = MakeMaterial(new Color(0.19f, 0.18f, 0.17f));
-        Material edge = MakeMaterial(new Color(0.10f, 0.12f, 0.12f));
+        Material earth = MakeMaterial(new Color(0.42f, 0.37f, 0.32f));
+        earth.mainTexture = MakeGroundTexture();
+        earth.mainTextureScale = new Vector2(1f, 2f);
+        Material edge = MakeMaterial(new Color(0.07f, 0.10f, 0.105f));
+        Material stone = MakeMaterial(new Color(0.24f, 0.26f, 0.30f));
+        Material bark = MakeMaterial(new Color(0.19f, 0.12f, 0.085f));
+        Material pine = MakeMaterial(new Color(0.075f, 0.16f, 0.13f));
+        Material pineLight = MakeMaterial(new Color(0.10f, 0.22f, 0.17f));
+        pineConeMesh = CreateConeMesh();
+
+        MakePrimitive("Forest floor", PrimitiveType.Cube, new Vector3(0f, -0.86f, 54f), new Vector3(180f, 0.3f, 300f), edge);
         for (int i = 0; i < TileCount; i++)
         {
             GameObject tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
             tile.name = "Trail tile " + i;
-            tile.transform.position = new Vector3(0f, -0.38f, (i - 2) * TileLength);
-            tile.transform.localScale = new Vector3(LaneWidth, 0.7f, TileLength);
+            tile.transform.position = new Vector3(0f, -0.56f, (i - 2) * TileLength);
+            tile.transform.localScale = new Vector3(LaneWidth, 0.55f, TileLength);
             tile.GetComponent<Renderer>().sharedMaterial = earth;
             floorTiles.Add(tile);
         }
 
-        MakePrimitive("Left forest bank", PrimitiveType.Cube, new Vector3(-8f, 0.25f, 45f), new Vector3(1.2f, 1.6f, 140f), edge);
-        MakePrimitive("Right forest bank", PrimitiveType.Cube, new Vector3(8f, 0.25f, 45f), new Vector3(1.2f, 1.6f, 140f), edge);
-        for (int i = 0; i < 16; i++)
+        MakePrimitive("Left trail edge", PrimitiveType.Cube, new Vector3(-7.55f, -0.28f, 45f), new Vector3(0.34f, 0.32f, 145f), stone);
+        MakePrimitive("Right trail edge", PrimitiveType.Cube, new Vector3(7.55f, -0.28f, 45f), new Vector3(0.34f, 0.32f, 145f), stone);
+        for (int i = 0; i < 34; i++)
         {
-            float z = 5f + i * 8f;
+            float z = -10f + i * 4.7f;
             float side = (i % 2 == 0) ? -1f : 1f;
-            MakePrimitive("Pine trunk", PrimitiveType.Cylinder, new Vector3(side * Random.Range(8f, 12f), 1.2f, z), new Vector3(0.35f, 2.4f, 0.35f), MakeMaterial(new Color(0.20f, 0.16f, 0.13f)));
-            MakePrimitive("Pine crown", PrimitiveType.Sphere, new Vector3(side * Random.Range(8f, 12f), 3.8f, z), new Vector3(2.4f, 3.4f, 2.4f), MakeMaterial(new Color(0.10f, 0.18f, 0.15f)));
+            float x = side * Random.Range(5.1f, 10.5f);
+            float height = Random.Range(2.5f, 4.1f);
+            MakePrimitive("Pine trunk", PrimitiveType.Cylinder, new Vector3(x, height * 0.48f, z), new Vector3(0.18f, height * 0.48f, 0.18f), bark);
+            MakePineCrown("Pine crown lower", new Vector3(x, height, z), 2.65f, 2.65f, pine);
+            MakePineCrown("Pine crown upper", new Vector3(x, height + 0.95f, z), 1.85f, 2.25f, pineLight);
+            for (int rock = 0; rock < 2; rock++)
+            {
+                float rockZ = z + Random.Range(-1.7f, 1.7f);
+                float rockX = side * Random.Range(4.55f, 5.6f);
+                GameObject stoneObj = MakePrimitive("Trail stone", PrimitiveType.Sphere, new Vector3(rockX, -0.12f, rockZ), new Vector3(Random.Range(0.35f, 0.8f), Random.Range(0.2f, 0.55f), Random.Range(0.35f, 0.75f)), stone);
+                stoneObj.transform.rotation = Quaternion.Euler(Random.Range(-12f, 12f), Random.Range(0f, 360f), Random.Range(-12f, 12f));
+            }
+        }
+
+        // Sparse firefly lights give the forest depth without adding a heavy post-processing dependency.
+        for (int i = 0; i < 5; i++)
+        {
+            float z = 8f + i * 23f;
+            float x = i % 2 == 0 ? -4.05f : 4.05f;
+            MakePrimitive("Veil lantern", PrimitiveType.Sphere, new Vector3(x, 2.0f, z), new Vector3(0.24f, 0.32f, 0.24f), MakeGlow(new Color(1f, 0.48f, 0.18f), 2.2f));
+            GameObject glow = new GameObject("Lantern glow");
+            glow.transform.position = new Vector3(x, 2f, z);
+            Light light = glow.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.43f, 0.16f);
+            light.intensity = 2.2f;
+            light.range = 7f;
         }
     }
 
@@ -129,7 +166,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         GameObject cameraObject = new GameObject("Trail camera");
         battleCamera = cameraObject.AddComponent<Camera>();
         battleCamera.orthographic = true;
-        battleCamera.orthographicSize = 12f;
+        battleCamera.orthographicSize = 9.5f;
         battleCamera.fieldOfView = 42f;
         cameraObject.tag = "MainCamera";
         cameraObject.transform.position = new Vector3(0f, 13f, -10f);
@@ -231,7 +268,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
             if (tile.transform.position.z + TileLength * 0.5f < hero.root.transform.position.z - TileLength)
             {
                 furthestZ += TileLength;
-                tile.transform.position = new Vector3(0f, -0.38f, furthestZ);
+                tile.transform.position = new Vector3(0f, -0.56f, furthestZ);
             }
         }
     }
@@ -240,7 +277,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     {
         spawnClock -= dt;
         if (spawnClock > 0f || enemies.Count >= 5 || kills >= 15) return;
-        float x = Random.Range(-5.5f, 5.5f);
+        float x = Random.Range(-3.1f, 3.1f);
         bool elite = Random.value < 0.20f;
         Unit enemy = CreateUnit(elite ? "Elite Skeleton" : "Skeleton Warrior", true, false, "enemy", new Color(0.37f, 0.32f, 0.43f), new Color(0.77f, 0.72f, 0.65f), new Vector3(x, 0f, hero.root.transform.position.z + Random.Range(17f, 26f)));
         enemy.hp = enemy.maxHp = elite ? 78f : 42f;
@@ -409,12 +446,33 @@ public sealed class ShadowVeilGame : MonoBehaviour
         root.transform.position = position;
         Unit unit = new Unit { root = root, isEnemy = enemy, isHero = isHero, role = role };
         float scale = isHero ? 1f : enemy ? 0.88f : 0.9f;
-        unit.torso = MakePrimitive("Torso", PrimitiveType.Capsule, position + Vector3.up * 1.0f * scale, new Vector3(0.48f, 0.58f, 0.38f) * scale, MakeMaterial(cloth), root.transform).transform;
-        MakePrimitive("Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, MakeMaterial(skin), root.transform);
-        unit.leftArm = MakePrimitive("Left arm", PrimitiveType.Capsule, position + new Vector3(-0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, MakeMaterial(skin), root.transform).transform;
-        unit.rightArm = MakePrimitive("Right arm", PrimitiveType.Capsule, position + new Vector3(0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, MakeMaterial(skin), root.transform).transform;
-        unit.leftLeg = MakePrimitive("Left leg", PrimitiveType.Capsule, position + new Vector3(-0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, MakeMaterial(new Color(0.20f, 0.18f, 0.20f)), root.transform).transform;
-        unit.rightLeg = MakePrimitive("Right leg", PrimitiveType.Capsule, position + new Vector3(0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, MakeMaterial(new Color(0.20f, 0.18f, 0.20f)), root.transform).transform;
+        Material outfit = MakeMaterial(cloth);
+        Material skinMaterial = MakeMaterial(skin);
+        Material darkLeather = MakeMaterial(new Color(0.12f, 0.10f, 0.12f));
+        Material armor = MakeMetal(new Color(0.31f, 0.34f, 0.39f), 0.72f);
+        Material accent = MakeGlow(enemy ? new Color(0.74f, 0.16f, 0.25f) : new Color(0.28f, 0.68f, 0.78f), 1.1f);
+        unit.torso = MakePrimitive("Torso", PrimitiveType.Capsule, position + Vector3.up * 1.0f * scale, new Vector3(0.48f, 0.58f, 0.38f) * scale, outfit, root.transform).transform;
+        MakePrimitive("Chest armor", PrimitiveType.Cube, position + new Vector3(0f, 1.12f, -0.06f) * scale, new Vector3(0.38f, 0.43f, 0.12f) * scale, armor, root.transform);
+        MakePrimitive("Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, skinMaterial, root.transform);
+        MakePrimitive("Hood", PrimitiveType.Sphere, position + new Vector3(0f, 2.01f, 0.08f) * scale, new Vector3(0.39f, 0.4f, 0.38f) * scale, outfit, root.transform);
+        unit.leftArm = MakePrimitive("Left arm", PrimitiveType.Capsule, position + new Vector3(-0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
+        unit.rightArm = MakePrimitive("Right arm", PrimitiveType.Capsule, position + new Vector3(0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
+        MakePrimitive("Left shoulder guard", PrimitiveType.Sphere, position + new Vector3(-0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, root.transform);
+        MakePrimitive("Right shoulder guard", PrimitiveType.Sphere, position + new Vector3(0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, root.transform);
+        unit.leftLeg = MakePrimitive("Left leg", PrimitiveType.Capsule, position + new Vector3(-0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, root.transform).transform;
+        unit.rightLeg = MakePrimitive("Right leg", PrimitiveType.Capsule, position + new Vector3(0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, root.transform).transform;
+        MakePrimitive("Belt", PrimitiveType.Cylinder, position + new Vector3(0f, 0.74f, 0f) * scale, new Vector3(0.32f, 0.07f, 0.3f) * scale, darkLeather, root.transform);
+        MakePrimitive("Belt clasp", PrimitiveType.Sphere, position + new Vector3(0f, 0.75f, -0.29f) * scale, new Vector3(0.10f, 0.11f, 0.05f) * scale, MakeMetal(new Color(0.72f, 0.48f, 0.20f), 0.55f), root.transform);
+        MakePrimitive("Eyes", PrimitiveType.Sphere, position + new Vector3(0f, 1.89f, -0.30f) * scale, new Vector3(0.16f, 0.055f, 0.035f) * scale, accent, root.transform);
+        if (enemy || role == "tank")
+        {
+            MakePrimitive("Weapon haft", PrimitiveType.Cylinder, position + new Vector3(0.62f, 0.83f, -0.03f) * scale, new Vector3(0.045f, 0.72f, 0.045f) * scale, darkLeather, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, 24f);
+            MakePrimitive("Weapon blade", PrimitiveType.Cube, position + new Vector3(0.92f, 1.44f, -0.03f) * scale, new Vector3(0.12f, 0.62f, 0.055f) * scale, armor, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -24f);
+        }
+        else if (role == "ranger" || role == "ranged")
+        {
+            MakePrimitive("Bow", PrimitiveType.Cylinder, position + new Vector3(0.56f, 1.13f, 0.03f) * scale, new Vector3(0.055f, 0.64f, 0.055f) * scale, MakeMetal(new Color(0.46f, 0.25f, 0.12f), 0.25f), root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
+        }
         MakePrimitive("Ground shadow", PrimitiveType.Cylinder, position + Vector3.up * 0.025f, new Vector3(0.7f, 0.025f, 0.42f) * scale, MakeMaterial(new Color(0.045f, 0.04f, 0.045f)), root.transform);
         unit.phase = Random.value * 5f;
         unit.speed = 3.5f;
@@ -459,6 +517,82 @@ public sealed class ShadowVeilGame : MonoBehaviour
         return material;
     }
 
+    private Material MakeMetal(Color color, float metallic)
+    {
+        Material material = MakeMaterial(color);
+        if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
+        if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0.62f);
+        return material;
+    }
+
+    private Material MakeGlow(Color color, float intensity)
+    {
+        Material material = MakeMaterial(color);
+        if (material.HasProperty("_EmissionColor"))
+        {
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", color * intensity);
+        }
+        return material;
+    }
+
+    private Texture2D MakeGroundTexture()
+    {
+        const int size = 256;
+        Texture2D texture = new Texture2D(size, size, TextureFormat.RGB24, false);
+        texture.name = "Ashen trail ground";
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float broad = Mathf.PerlinNoise(x * 0.028f, y * 0.028f);
+            float fine = Mathf.PerlinNoise(x * 0.15f + 17f, y * 0.15f + 31f);
+            float grain = (Mathf.PerlinNoise(x * 0.37f + 73f, y * 0.37f + 11f) - 0.5f) * 0.09f;
+            float value = Mathf.Clamp(0.67f + (broad - 0.5f) * 0.32f + (fine - 0.5f) * 0.18f + grain, 0.35f, 0.9f);
+            texture.SetPixel(x, y, new Color(value, value * 0.91f, value * 0.78f));
+        }
+        texture.Apply(false, true);
+        return texture;
+    }
+
+    private Mesh CreateConeMesh()
+    {
+        const int segments = 10;
+        Vector3[] vertices = new Vector3[segments + 2];
+        int[] triangles = new int[segments * 6];
+        vertices[0] = Vector3.zero;
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * Mathf.PI * 2f / segments;
+            vertices[i + 1] = new Vector3(Mathf.Cos(angle) * 0.5f, 0f, Mathf.Sin(angle) * 0.5f);
+        }
+        vertices[segments + 1] = Vector3.up;
+        for (int i = 0; i < segments; i++)
+        {
+            int current = i + 1;
+            int next = (i + 1) % segments + 1;
+            int offset = i * 6;
+            triangles[offset] = current; triangles[offset + 1] = segments + 1; triangles[offset + 2] = next;
+            triangles[offset + 3] = 0; triangles[offset + 4] = next; triangles[offset + 5] = current;
+        }
+        Mesh mesh = new Mesh { name = "Low poly pine crown" };
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    private void MakePineCrown(string name, Vector3 position, float width, float height, Material material)
+    {
+        GameObject crown = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        crown.transform.position = position;
+        crown.transform.localScale = new Vector3(width, height, width);
+        crown.GetComponent<MeshFilter>().sharedMesh = pineConeMesh;
+        crown.GetComponent<MeshRenderer>().sharedMaterial = material;
+    }
+
     private void Panel(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 offsetMin, Vector2 offsetMax, Color color)
     {
         GameObject obj = new GameObject(name, typeof(RectTransform), typeof(Image));
@@ -499,8 +633,23 @@ public sealed class ShadowVeilGame : MonoBehaviour
         float total = width * 5f + gap * 4f;
         float xMin = (1f - total) * 0.5f + index * (width + gap);
         rect.anchorMin = new Vector2(xMin, 0.014f); rect.anchorMax = new Vector2(xMin + width, 0.132f); rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
-        card.GetComponent<Image>().color = color;
+        Image cardImage = card.GetComponent<Image>();
+        cardImage.color = new Color(0.72f, 0.55f, 0.29f, 1f);
         Button button = card.GetComponent<Button>(); button.targetGraphic = card.GetComponent<Image>(); button.onClick.AddListener(action);
+        ColorBlock states = button.colors;
+        states.highlightedColor = new Color(1f, 0.91f, 0.72f, 1f);
+        states.pressedColor = new Color(0.68f, 0.54f, 0.40f, 1f);
+        button.colors = states;
+        GameObject face = new GameObject("Card face", typeof(RectTransform), typeof(Image));
+        face.transform.SetParent(card.transform, false);
+        RectTransform faceRect = face.GetComponent<RectTransform>(); faceRect.anchorMin = Vector2.zero; faceRect.anchorMax = Vector2.one; faceRect.offsetMin = new Vector2(2f, 2f); faceRect.offsetMax = new Vector2(-2f, -2f);
+        face.GetComponent<Image>().color = new Color(color.r * 0.52f, color.g * 0.52f, color.b * 0.52f, 1f);
+        face.GetComponent<Image>().raycastTarget = false;
+        GameObject crest = new GameObject("Card crest", typeof(RectTransform), typeof(Image));
+        crest.transform.SetParent(face.transform, false);
+        RectTransform crestRect = crest.GetComponent<RectTransform>(); crestRect.anchorMin = new Vector2(0f, 0.88f); crestRect.anchorMax = new Vector2(1f, 1f); crestRect.offsetMin = Vector2.zero; crestRect.offsetMax = Vector2.zero;
+        crest.GetComponent<Image>().color = color;
+        crest.GetComponent<Image>().raycastTarget = false;
         Text label = AddText("Card label " + index, title + "\n" + subtitle, 10, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Color.white);
         label.transform.SetParent(card.transform, false);
         RectTransform labelRect = label.GetComponent<RectTransform>(); labelRect.anchorMin = Vector2.zero; labelRect.anchorMax = Vector2.one; labelRect.offsetMin = new Vector2(2f, 2f); labelRect.offsetMax = new Vector2(-2f, -2f);
@@ -530,5 +679,6 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private void OnDestroy()
     {
         foreach (Material material in materials) if (material != null) Destroy(material);
+        if (pineConeMesh != null) Destroy(pineConeMesh);
     }
 }
