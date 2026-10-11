@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,6 +16,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private readonly List<Material> materials = new List<Material>();
     private readonly List<Button> cardButtons = new List<Button>();
     private readonly List<int> cardCosts = new List<int>();
+    private readonly List<Projectile> projectiles = new List<Projectile>();
+    private readonly List<VisualEffect> visualEffects = new List<VisualEffect>();
     private readonly Dictionary<Collider, Unit> unitsByCollider = new Dictionary<Collider, Unit>();
     private readonly Dictionary<Collider, float> manaPickups = new Dictionary<Collider, float>();
 
@@ -23,6 +26,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private Camera battleCamera;
     private Canvas canvas;
     private Mesh pineConeMesh;
+    private Material arrowMaterial;
+    private Material arrowTipMaterial;
     private Text healthText;
     private Text manaText;
     private Text objectiveText;
@@ -40,6 +45,24 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private Vector3 destination;
     private bool hasDestination;
     private bool ended;
+
+    private sealed class Projectile
+    {
+        public GameObject root;
+        public Unit target;
+        public float damage;
+        public float speed;
+    }
+
+    private sealed class VisualEffect
+    {
+        public GameObject root;
+        public Material material;
+        public Color color;
+        public Vector3 endScale;
+        public float lifetime;
+        public float age;
+    }
 
     private sealed class Unit
     {
@@ -62,6 +85,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         public float cooldown;
         public float attackRate;
         public float healCooldown;
+        public float attackTime;
         public float phase;
     }
 
@@ -89,6 +113,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
         UpdateFloor();
         UpdateUnits(dt);
         HeroAttack(dt);
+        UpdateProjectiles(dt);
+        UpdateVisualEffects(dt);
         SpawnEnemies(dt);
         SpawnManaPickups(dt);
         UpdateHud();
@@ -121,6 +147,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
         Material bark = MakeMaterial(new Color(0.19f, 0.12f, 0.085f));
         Material pine = MakeMaterial(new Color(0.075f, 0.16f, 0.13f));
         Material pineLight = MakeMaterial(new Color(0.10f, 0.22f, 0.17f));
+        arrowMaterial = MakeMetal(new Color(0.62f, 0.50f, 0.33f), 0.4f);
+        arrowTipMaterial = MakeGlow(new Color(0.92f, 0.52f, 0.19f), 1.3f);
         pineConeMesh = CreateConeMesh();
 
         MakePrimitive("Forest floor", PrimitiveType.Cube, new Vector3(0f, -0.86f, 54f), new Vector3(180f, 0.3f, 300f), edge);
@@ -400,6 +428,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
             {
                 Unit target = FindClosestEnemy(ally.root.transform.position);
                 if (target != null) Engage(ally, target, dt);
+                else Animate(ally, dt, false);
             }
             if (ally.hp <= 0f)
             {
@@ -428,7 +457,80 @@ public sealed class ShadowVeilGame : MonoBehaviour
         if (hero.cooldown <= 0f)
         {
             hero.cooldown = 0.8f;
-            target.hp -= 8f;
+            BeginAttack(hero);
+            FireArrow(hero, target, 8f);
+        }
+    }
+
+    private void BeginAttack(Unit attacker)
+    {
+        attacker.attackTime = 0.36f;
+    }
+
+    private void FireArrow(Unit attacker, Unit target, float damage)
+    {
+        Vector3 position = attacker.root.transform.position + Vector3.up * 1.48f + attacker.root.transform.forward * 0.4f;
+        GameObject arrow = new GameObject("Arrow projectile");
+        arrow.transform.position = position;
+        Vector3 direction = (target.root.transform.position + Vector3.up * 0.9f - position).normalized;
+        arrow.transform.rotation = Quaternion.LookRotation(direction);
+        GameObject shaft = MakePrimitive("Arrow shaft", PrimitiveType.Cylinder, position, new Vector3(0.025f, 0.24f, 0.025f), arrowMaterial, arrow.transform);
+        shaft.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        MakePrimitive("Arrow head", PrimitiveType.Cube, position + direction * 0.27f, new Vector3(0.07f, 0.07f, 0.14f), arrowTipMaterial, arrow.transform);
+        projectiles.Add(new Projectile { root = arrow, target = target, damage = damage, speed = 17f });
+    }
+
+    private void UpdateProjectiles(float dt)
+    {
+        for (int i = projectiles.Count - 1; i >= 0; i--)
+        {
+            Projectile projectile = projectiles[i];
+            if (projectile.target == null || projectile.target.root == null || projectile.target.hp <= 0f)
+            {
+                Destroy(projectile.root);
+                projectiles.RemoveAt(i);
+                continue;
+            }
+            Vector3 targetPosition = projectile.target.root.transform.position + Vector3.up * 0.92f;
+            Vector3 delta = targetPosition - projectile.root.transform.position;
+            if (delta.magnitude <= projectile.speed * dt + 0.12f)
+            {
+                projectile.target.hp -= projectile.damage;
+                if (projectile.target.healthFill != null) projectile.target.healthFill.fillAmount = Mathf.Clamp01(projectile.target.hp / projectile.target.maxHp);
+                CreateImpactEffect(targetPosition, new Color(1f, 0.62f, 0.24f), Vector3.one * 0.38f, 0.18f);
+                Destroy(projectile.root);
+                projectiles.RemoveAt(i);
+                continue;
+            }
+            Vector3 direction = delta.normalized;
+            projectile.root.transform.position += direction * projectile.speed * dt;
+            projectile.root.transform.rotation = Quaternion.LookRotation(direction);
+        }
+    }
+
+    private void CreateImpactEffect(Vector3 position, Color color, Vector3 endScale, float lifetime)
+    {
+        Material material = MakeGlow(color, 2f);
+        GameObject effect = MakePrimitive("Impact effect", PrimitiveType.Sphere, position, Vector3.one * 0.12f, material);
+        visualEffects.Add(new VisualEffect { root = effect, material = material, color = color, endScale = endScale, lifetime = lifetime });
+    }
+
+    private void UpdateVisualEffects(float dt)
+    {
+        for (int i = visualEffects.Count - 1; i >= 0; i--)
+        {
+            VisualEffect effect = visualEffects[i];
+            effect.age += dt;
+            float progress = Mathf.Clamp01(effect.age / effect.lifetime);
+            effect.root.transform.localScale = Vector3.Lerp(Vector3.one * 0.12f, effect.endScale, progress);
+            if (effect.material.HasProperty("_EmissionColor")) effect.material.SetColor("_EmissionColor", effect.color * (2f * (1f - progress)));
+            if (progress >= 1f)
+            {
+                materials.Remove(effect.material);
+                Destroy(effect.material);
+                Destroy(effect.root);
+                visualEffects.RemoveAt(i);
+            }
         }
     }
 
@@ -453,10 +555,16 @@ public sealed class ShadowVeilGame : MonoBehaviour
         if (attacker.cooldown <= 0f)
         {
             attacker.cooldown = attacker.attackRate;
-            target.hp -= attacker.damage;
+            BeginAttack(attacker);
+            if (attacker.role == "ranged") FireArrow(attacker, target, attacker.damage);
+            else
+            {
+                target.hp -= attacker.damage;
+                CreateImpactEffect(target.root.transform.position + Vector3.up * 0.85f, new Color(1f, 0.42f, 0.20f), new Vector3(0.55f, 0.55f, 0.55f), 0.22f);
+            }
             if (target.healthFill != null) target.healthFill.fillAmount = Mathf.Clamp01(target.hp / target.maxHp);
-            Animate(attacker, dt, false);
         }
+        Animate(attacker, dt, false);
     }
 
     private Vector3 Separation(Unit unit)
@@ -507,6 +615,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         {
             healer.healCooldown = 1.4f;
             target.hp = Mathf.Min(target.maxHp, target.hp + 12f);
+            CreateImpactEffect(target.root.transform.position + Vector3.up * 1.4f, new Color(0.26f, 0.88f, 0.61f), new Vector3(0.7f, 1.2f, 0.7f), 0.55f);
         }
         Animate(healer, dt, false);
     }
@@ -552,7 +661,8 @@ public sealed class ShadowVeilGame : MonoBehaviour
             float side = slot % 2 == 0 ? -1f : 1f;
             float row = slot / 2;
             Vector3 position = hero.root.transform.position + new Vector3(side * (1.5f + row * 0.45f), 0f, -1.4f - row * 1.5f);
-            Unit ally = CreateUnit(name, false, false, role, cloth, new Color(0.80f, 0.68f, 0.58f), position);
+            Color skin = role == "ranged" ? new Color(0.76f, 0.72f, 0.63f) : role == "healer" ? new Color(0.44f, 0.63f, 0.39f) : new Color(0.80f, 0.68f, 0.58f);
+            Unit ally = CreateUnit(name, false, false, role, cloth, skin, position);
             ally.hp = ally.maxHp = role == "tank" ? 110f : role == "ranged" ? 48f : role == "healer" ? 72f : 62f;
             ally.speed = role == "assault" ? 5.3f : 3.8f;
             ally.damage = role == "tank" ? 11f : role == "ranged" ? 12f : role == "healer" ? 2f : 18f;
@@ -568,6 +678,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         if (ended || mana < 2f || focus == null) return;
         mana -= 2f;
         Vector3 center = focus.root.transform.position;
+        CreateImpactEffect(center + Vector3.up * 0.35f, new Color(1f, 0.28f, 0.06f), new Vector3(4.4f, 1.2f, 4.4f), 0.42f);
         foreach (Unit enemy in enemies)
             if (Vector3.Distance(enemy.root.transform.position, center) <= 3.5f) enemy.hp -= 42f;
     }
@@ -576,6 +687,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     {
         if (ended || mana < 5f) return;
         mana -= 5f;
+        CreateImpactEffect(hero.root.transform.position + Vector3.up * 0.12f, new Color(0.26f, 0.70f, 1f), new Vector3(4.6f, 0.25f, 4.6f), 0.55f);
         hero.hp = Mathf.Min(hero.maxHp, hero.hp + 22f);
         foreach (Unit ally in allies) ally.hp = Mathf.Min(ally.maxHp, ally.hp + 22f);
     }
@@ -585,11 +697,11 @@ public sealed class ShadowVeilGame : MonoBehaviour
         GameObject root = new GameObject(name);
         root.transform.position = position;
         Unit unit = new Unit { root = root, isEnemy = enemy, isHero = isHero, role = role };
-        float scale = isHero ? 1f : enemy ? 0.88f : 0.9f;
+        float scale = isHero ? 1f : enemy ? 0.88f : role == "healer" ? 1.12f : role == "assault" ? 0.78f : 0.9f;
         CapsuleCollider unitCollider = root.AddComponent<CapsuleCollider>();
-        unitCollider.center = new Vector3(0f, 1f, 0f);
-        unitCollider.height = 2.1f;
-        unitCollider.radius = 0.48f;
+        unitCollider.center = new Vector3(0f, 1f * scale, 0f);
+        unitCollider.height = 2.1f * scale;
+        unitCollider.radius = 0.48f * scale;
         Material outfit = MakeMaterial(cloth);
         Material skinMaterial = MakeMaterial(skin);
         Material darkLeather = MakeMaterial(new Color(0.12f, 0.10f, 0.12f));
@@ -597,8 +709,20 @@ public sealed class ShadowVeilGame : MonoBehaviour
         Material accent = MakeGlow(enemy ? new Color(0.74f, 0.16f, 0.25f) : new Color(0.28f, 0.68f, 0.78f), 1.1f);
         unit.torso = MakePrimitive("Torso", PrimitiveType.Capsule, position + Vector3.up * 1.0f * scale, new Vector3(0.48f, 0.58f, 0.38f) * scale, outfit, root.transform).transform;
         MakePrimitive("Chest armor", PrimitiveType.Cube, position + new Vector3(0f, 1.12f, -0.06f) * scale, new Vector3(0.38f, 0.43f, 0.12f) * scale, armor, root.transform);
-        MakePrimitive("Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, skinMaterial, root.transform);
-        MakePrimitive("Hood", PrimitiveType.Sphere, position + new Vector3(0f, 2.01f, 0.08f) * scale, new Vector3(0.39f, 0.4f, 0.38f) * scale, outfit, root.transform);
+        MakePrimitive(enemy || role == "ranged" ? "Skull" : "Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, skinMaterial, root.transform);
+        if (isHero)
+        {
+            Material hair = MakeMaterial(new Color(0.36f, 0.10f, 0.075f));
+            MakePrimitive("Long red hair", PrimitiveType.Sphere, position + new Vector3(0f, 2.03f, 0.12f) * scale, new Vector3(0.42f, 0.40f, 0.39f) * scale, hair, root.transform);
+            MakePrimitive("Hair lock left", PrimitiveType.Capsule, position + new Vector3(-0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, root.transform);
+            MakePrimitive("Hair lock right", PrimitiveType.Capsule, position + new Vector3(0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, root.transform);
+            MakePrimitive("Ranger mantle", PrimitiveType.Capsule, position + new Vector3(0f, 0.93f, 0.27f) * scale, new Vector3(0.37f, 0.58f, 0.13f) * scale, outfit, root.transform);
+            MakePrimitive("Arrow quiver", PrimitiveType.Cylinder, position + new Vector3(-0.27f, 1.35f, 0.24f) * scale, new Vector3(0.11f, 0.36f, 0.11f) * scale, darkLeather, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
+        }
+        else
+        {
+            MakePrimitive("Hood", PrimitiveType.Sphere, position + new Vector3(0f, 2.01f, 0.08f) * scale, new Vector3(0.39f, 0.4f, 0.38f) * scale, outfit, root.transform);
+        }
         unit.leftArm = MakePrimitive("Left arm", PrimitiveType.Capsule, position + new Vector3(-0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
         unit.rightArm = MakePrimitive("Right arm", PrimitiveType.Capsule, position + new Vector3(0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
         MakePrimitive("Left shoulder guard", PrimitiveType.Sphere, position + new Vector3(-0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, root.transform);
@@ -608,14 +732,30 @@ public sealed class ShadowVeilGame : MonoBehaviour
         MakePrimitive("Belt", PrimitiveType.Cylinder, position + new Vector3(0f, 0.74f, 0f) * scale, new Vector3(0.32f, 0.07f, 0.3f) * scale, darkLeather, root.transform);
         MakePrimitive("Belt clasp", PrimitiveType.Sphere, position + new Vector3(0f, 0.75f, -0.29f) * scale, new Vector3(0.10f, 0.11f, 0.05f) * scale, MakeMetal(new Color(0.72f, 0.48f, 0.20f), 0.55f), root.transform);
         MakePrimitive("Eyes", PrimitiveType.Sphere, position + new Vector3(0f, 1.89f, -0.30f) * scale, new Vector3(0.16f, 0.055f, 0.035f) * scale, accent, root.transform);
+        if (enemy || role == "ranged")
+        {
+            Material eyeGlow = MakeGlow(new Color(0.95f, 0.12f, 0.08f), 2f);
+            MakePrimitive("Left eye ember", PrimitiveType.Sphere, position + new Vector3(-0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, root.transform);
+            MakePrimitive("Right eye ember", PrimitiveType.Sphere, position + new Vector3(0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, root.transform);
+        }
+        if (role == "assault")
+        {
+            MakePineCrown("Imp horn left", position + new Vector3(-0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), root.transform);
+            MakePineCrown("Imp horn right", position + new Vector3(0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), root.transform);
+        }
         if (enemy || role == "tank")
         {
-            MakePrimitive("Weapon haft", PrimitiveType.Cylinder, position + new Vector3(0.62f, 0.83f, -0.03f) * scale, new Vector3(0.045f, 0.72f, 0.045f) * scale, darkLeather, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, 24f);
-            MakePrimitive("Weapon blade", PrimitiveType.Cube, position + new Vector3(0.92f, 1.44f, -0.03f) * scale, new Vector3(0.12f, 0.62f, 0.055f) * scale, armor, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -24f);
+            MakePrimitive("Weapon haft", PrimitiveType.Cylinder, position + new Vector3(0.54f, 0.84f, -0.03f) * scale, new Vector3(0.045f, 0.72f, 0.045f) * scale, darkLeather, unit.rightArm).transform.localRotation = Quaternion.Euler(0f, 0f, 24f);
+            MakePrimitive("Weapon blade", PrimitiveType.Cube, position + new Vector3(0.83f, 1.42f, -0.03f) * scale, new Vector3(0.12f, 0.62f, 0.055f) * scale, armor, unit.rightArm).transform.localRotation = Quaternion.Euler(0f, 0f, -24f);
         }
         else if (role == "ranger" || role == "ranged")
         {
-            MakePrimitive("Bow", PrimitiveType.Cylinder, position + new Vector3(0.56f, 1.13f, 0.03f) * scale, new Vector3(0.055f, 0.64f, 0.055f) * scale, MakeMetal(new Color(0.46f, 0.25f, 0.12f), 0.25f), root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
+            MakePrimitive("Bow", PrimitiveType.Cylinder, position + new Vector3(0.56f, 1.13f, 0.03f) * scale, new Vector3(0.055f, 0.64f, 0.055f) * scale, MakeMetal(new Color(0.46f, 0.25f, 0.12f), 0.25f), unit.rightArm).transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
+        }
+        else if (role == "healer")
+        {
+            MakePrimitive("Healer staff", PrimitiveType.Cylinder, position + new Vector3(0.62f, 1.16f, 0.02f) * scale, new Vector3(0.06f, 0.92f, 0.06f) * scale, darkLeather, unit.rightArm).transform.localRotation = Quaternion.Euler(0f, 0f, -10f);
+            MakePrimitive("Staff crystal", PrimitiveType.Sphere, position + new Vector3(0.73f, 2.02f, 0.02f) * scale, new Vector3(0.20f, 0.23f, 0.20f) * scale, MakeGlow(new Color(0.30f, 0.95f, 0.56f), 2.5f), unit.rightArm);
         }
         MakePrimitive("Ground shadow", PrimitiveType.Cylinder, position + Vector3.up * 0.025f, new Vector3(0.7f, 0.025f, 0.42f) * scale, MakeMaterial(new Color(0.045f, 0.04f, 0.045f)), root.transform);
         if (enemy)
@@ -636,12 +776,16 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private void Animate(Unit unit, float dt, bool moving)
     {
         unit.phase += dt * (moving ? 11f : 3f);
+        unit.attackTime = Mathf.Max(0f, unit.attackTime - dt);
         float stride = moving ? Mathf.Sin(unit.phase) * 28f : 0f;
+        float attackProgress = unit.attackTime > 0f ? 1f - unit.attackTime / 0.36f : 0f;
+        float swing = attackProgress > 0f ? Mathf.Sin(attackProgress * Mathf.PI) : 0f;
         unit.leftLeg.localRotation = Quaternion.Euler(stride, 0f, 0f);
         unit.rightLeg.localRotation = Quaternion.Euler(-stride, 0f, 0f);
-        unit.leftArm.localRotation = Quaternion.Euler(-stride * 0.65f, 0f, 0f);
-        unit.rightArm.localRotation = Quaternion.Euler(stride * 0.65f, 0f, 0f);
-        unit.torso.localPosition = new Vector3(0f, 1f + (moving ? Mathf.Abs(Mathf.Sin(unit.phase)) * 0.045f : 0f), 0f);
+        unit.leftArm.localRotation = Quaternion.Euler(-stride * 0.65f, 0f, swing * 10f);
+        unit.rightArm.localRotation = Quaternion.Euler(stride * 0.65f - swing * 105f, 0f, -swing * 8f);
+        unit.torso.localRotation = Quaternion.Euler(-swing * 8f, 0f, 0f);
+        unit.torso.localPosition = new Vector3(0f, 1f + (moving ? Mathf.Abs(Mathf.Sin(unit.phase)) * 0.045f : Mathf.Sin(unit.phase) * 0.012f), 0f);
     }
 
     private GameObject MakePrimitive(string name, PrimitiveType type, Vector3 position, Vector3 scale, Material material, Transform parent = null)
@@ -734,11 +878,12 @@ public sealed class ShadowVeilGame : MonoBehaviour
         return mesh;
     }
 
-    private void MakePineCrown(string name, Vector3 position, float width, float height, Material material)
+    private void MakePineCrown(string name, Vector3 position, float width, float height, Material material, Transform parent = null)
     {
         GameObject crown = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
         crown.transform.position = position;
         crown.transform.localScale = new Vector3(width, height, width);
+        if (parent != null) crown.transform.SetParent(parent, true);
         crown.GetComponent<MeshFilter>().sharedMesh = pineConeMesh;
         crown.GetComponent<MeshRenderer>().sharedMaterial = material;
     }
