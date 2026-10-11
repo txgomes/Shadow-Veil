@@ -473,7 +473,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         GameObject obj = new GameObject(name, typeof(RectTransform), typeof(Text));
         obj.transform.SetParent(canvas.transform, false);
         RectTransform rect = obj.GetComponent<RectTransform>(); rect.anchorMin = anchorMin; rect.anchorMax = anchorMax; rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
-        Text text = obj.GetComponent<Text>(); text.text = value; text.font = Resources.GetBuiltinResource<Font>("Arial.ttf"); text.fontSize = size; text.alignment = align; text.color = color; text.raycastTarget = false;
+        Text text = obj.GetComponent<Text>(); text.text = value; text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.fontSize = size; text.alignment = align; text.color = color; text.raycastTarget = false;
         return text;
     }
 
