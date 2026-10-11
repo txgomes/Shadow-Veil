@@ -67,6 +67,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private sealed class Unit
     {
         public GameObject root;
+        public Animator animator;
         public Transform torso;
         public Transform upperBody;
         public Transform leftLeg;
@@ -414,7 +415,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
                 Collider collider = enemy.root.GetComponent<Collider>();
                 if (collider != null) unitsByCollider.Remove(collider);
                 if (selectedEnemy == enemy) selectedEnemy = null;
-                Destroy(enemy.root);
+                PlayDeath(enemy);
                 kills++;
                 mana = Mathf.Min(26f, mana + 4f);
                 wave = 1 + kills / 5;
@@ -437,9 +438,23 @@ public sealed class ShadowVeilGame : MonoBehaviour
                 allies.RemoveAt(i);
                 Collider collider = ally.root.GetComponent<Collider>();
                 if (collider != null) unitsByCollider.Remove(collider);
-                Destroy(ally.root);
+                PlayDeath(ally);
             }
         }
+    }
+
+    private void PlayDeath(Unit unit)
+    {
+        Collider collider = unit.root.GetComponent<Collider>();
+        if (collider != null) collider.enabled = false;
+        if (unit.selectionDisc != null) unit.selectionDisc.SetActive(false);
+        if (unit.animator != null)
+        {
+            unit.animator.SetBool("Moving", false);
+            unit.animator.SetTrigger("Death");
+            Destroy(unit.root, 1.6f);
+        }
+        else Destroy(unit.root);
     }
 
     private void HeroAttack(float dt)
@@ -467,6 +482,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     private void BeginAttack(Unit attacker)
     {
         attacker.attackTime = 0.36f;
+        if (attacker.animator != null) attacker.animator.SetTrigger("Attack");
     }
 
     private void FireArrow(Unit attacker, Unit target, float damage)
@@ -701,6 +717,19 @@ public sealed class ShadowVeilGame : MonoBehaviour
         Unit unit = new Unit { root = root, isEnemy = enemy, isHero = isHero, role = role };
         float scale = isHero ? 1f : enemy ? 0.88f : role == "healer" ? 1.12f : role == "assault" ? 0.78f : 0.9f;
         unit.visualScale = scale;
+        GameObject importedVisual = null;
+        if (enemy || role == "tank")
+        {
+            GameObject knightPrefab = Resources.Load<GameObject>("Characters/KnightWarrior");
+            if (knightPrefab != null)
+            {
+                importedVisual = Instantiate(knightPrefab, root.transform, false);
+                importedVisual.transform.localPosition = Vector3.zero;
+                importedVisual.transform.localRotation = Quaternion.identity;
+                importedVisual.transform.localScale = Vector3.one * scale;
+                unit.animator = importedVisual.GetComponentInChildren<Animator>();
+            }
+        }
         CapsuleCollider unitCollider = root.AddComponent<CapsuleCollider>();
         unitCollider.center = new Vector3(0f, 1f * scale, 0f);
         unitCollider.height = 2.1f * scale;
@@ -774,6 +803,15 @@ public sealed class ShadowVeilGame : MonoBehaviour
             unit.selectionDisc = MakePrimitive("Target marker", PrimitiveType.Cylinder, position + Vector3.up * 0.055f, new Vector3(1.35f, 0.015f, 1.0f), MakeGlow(new Color(0.95f, 0.22f, 0.16f), 1.2f), root.transform);
             unit.selectionDisc.SetActive(false);
         }
+        if (importedVisual != null)
+        {
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer.transform == importedVisual.transform || renderer.transform.IsChildOf(importedVisual.transform)) continue;
+                if (renderer.gameObject.name == "Ground shadow" || renderer.gameObject.name == "Target marker") continue;
+                renderer.enabled = false;
+            }
+        }
         unit.phase = Random.value * 5f;
         unit.speed = 3.5f;
         unit.range = 1.7f;
@@ -788,6 +826,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     {
         unit.phase += dt * (moving ? 11f : 3f);
         unit.attackTime = Mathf.Max(0f, unit.attackTime - dt);
+        if (unit.animator != null) unit.animator.SetBool("Moving", moving);
         float stride = moving ? Mathf.Sin(unit.phase) * 34f : 0f;
         float attackProgress = unit.attackTime > 0f ? 1f - unit.attackTime / 0.36f : 0f;
         float swing = attackProgress > 0f ? Mathf.Sin(attackProgress * Mathf.PI) : 0f;
