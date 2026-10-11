@@ -57,6 +57,12 @@ public sealed class KnightCharacterImporter : AssetPostprocessor
         importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
         importer.importAnimation = true;
         importer.optimizeGameObjects = false;
+    }
+
+    private void OnPreprocessAnimation()
+    {
+        if (!string.Equals(assetPath, ModelPath, StringComparison.Ordinal)) return;
+        ModelImporter importer = (ModelImporter)assetImporter;
         ModelImporterClipAnimation[] animations = importer.defaultClipAnimations;
         foreach (ModelImporterClipAnimation animation in animations)
         {
