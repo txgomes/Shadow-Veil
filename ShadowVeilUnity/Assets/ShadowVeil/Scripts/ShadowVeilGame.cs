@@ -68,6 +68,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
     {
         public GameObject root;
         public Transform torso;
+        public Transform upperBody;
         public Transform leftLeg;
         public Transform rightLeg;
         public Transform leftArm;
@@ -87,6 +88,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         public float healCooldown;
         public float attackTime;
         public float phase;
+        public float visualScale;
     }
 
     private void Start()
@@ -698,6 +700,7 @@ public sealed class ShadowVeilGame : MonoBehaviour
         root.transform.position = position;
         Unit unit = new Unit { root = root, isEnemy = enemy, isHero = isHero, role = role };
         float scale = isHero ? 1f : enemy ? 0.88f : role == "healer" ? 1.12f : role == "assault" ? 0.78f : 0.9f;
+        unit.visualScale = scale;
         CapsuleCollider unitCollider = root.AddComponent<CapsuleCollider>();
         unitCollider.center = new Vector3(0f, 1f * scale, 0f);
         unitCollider.height = 2.1f * scale;
@@ -707,41 +710,49 @@ public sealed class ShadowVeilGame : MonoBehaviour
         Material darkLeather = MakeMaterial(new Color(0.12f, 0.10f, 0.12f));
         Material armor = MakeMetal(new Color(0.31f, 0.34f, 0.39f), 0.72f);
         Material accent = MakeGlow(enemy ? new Color(0.74f, 0.16f, 0.25f) : new Color(0.28f, 0.68f, 0.78f), 1.1f);
-        unit.torso = MakePrimitive("Torso", PrimitiveType.Capsule, position + Vector3.up * 1.0f * scale, new Vector3(0.48f, 0.58f, 0.38f) * scale, outfit, root.transform).transform;
-        MakePrimitive("Chest armor", PrimitiveType.Cube, position + new Vector3(0f, 1.12f, -0.06f) * scale, new Vector3(0.38f, 0.43f, 0.12f) * scale, armor, root.transform);
-        MakePrimitive(enemy || role == "ranged" ? "Skull" : "Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, skinMaterial, root.transform);
+        unit.upperBody = CreatePivot("Upper body pivot", position + Vector3.up * 0.72f * scale, root.transform);
+        unit.torso = MakePrimitive("Torso", PrimitiveType.Capsule, position + Vector3.up * 1.0f * scale, new Vector3(0.48f, 0.58f, 0.38f) * scale, outfit, unit.upperBody).transform;
+        MakePrimitive("Chest armor", PrimitiveType.Cube, position + new Vector3(0f, 1.12f, -0.06f) * scale, new Vector3(0.38f, 0.43f, 0.12f) * scale, armor, unit.upperBody);
+        MakePrimitive(enemy || role == "ranged" ? "Skull" : "Head", PrimitiveType.Sphere, position + Vector3.up * 1.85f * scale, new Vector3(0.34f, 0.4f, 0.34f) * scale, skinMaterial, unit.upperBody);
         if (isHero)
         {
             Material hair = MakeMaterial(new Color(0.36f, 0.10f, 0.075f));
-            MakePrimitive("Long red hair", PrimitiveType.Sphere, position + new Vector3(0f, 2.03f, 0.12f) * scale, new Vector3(0.42f, 0.40f, 0.39f) * scale, hair, root.transform);
-            MakePrimitive("Hair lock left", PrimitiveType.Capsule, position + new Vector3(-0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, root.transform);
-            MakePrimitive("Hair lock right", PrimitiveType.Capsule, position + new Vector3(0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, root.transform);
-            MakePrimitive("Ranger mantle", PrimitiveType.Capsule, position + new Vector3(0f, 0.93f, 0.27f) * scale, new Vector3(0.37f, 0.58f, 0.13f) * scale, outfit, root.transform);
-            MakePrimitive("Arrow quiver", PrimitiveType.Cylinder, position + new Vector3(-0.27f, 1.35f, 0.24f) * scale, new Vector3(0.11f, 0.36f, 0.11f) * scale, darkLeather, root.transform).transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
+            MakePrimitive("Long red hair", PrimitiveType.Sphere, position + new Vector3(0f, 2.03f, 0.12f) * scale, new Vector3(0.42f, 0.40f, 0.39f) * scale, hair, unit.upperBody);
+            MakePrimitive("Hair lock left", PrimitiveType.Capsule, position + new Vector3(-0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, unit.upperBody);
+            MakePrimitive("Hair lock right", PrimitiveType.Capsule, position + new Vector3(0.29f, 1.43f, 0.15f) * scale, new Vector3(0.11f, 0.63f, 0.12f) * scale, hair, unit.upperBody);
+            MakePrimitive("Ranger mantle", PrimitiveType.Capsule, position + new Vector3(0f, 0.93f, 0.27f) * scale, new Vector3(0.37f, 0.58f, 0.13f) * scale, outfit, unit.upperBody);
+            MakePrimitive("Ranger mantle clasp", PrimitiveType.Sphere, position + new Vector3(0f, 1.43f, -0.29f) * scale, new Vector3(0.12f, 0.14f, 0.05f) * scale, MakeMetal(new Color(0.78f, 0.54f, 0.24f), 0.65f), unit.upperBody);
+            MakePrimitive("Ranger chest strap", PrimitiveType.Cube, position + new Vector3(-0.12f, 1.18f, -0.145f) * scale, new Vector3(0.08f, 0.54f, 0.035f) * scale, darkLeather, unit.upperBody).transform.localRotation = Quaternion.Euler(0f, 0f, -13f);
+            MakePrimitive("Ranger bracer", PrimitiveType.Cylinder, position + new Vector3(0.39f, 0.91f, -0.01f) * scale, new Vector3(0.19f, 0.13f, 0.19f) * scale, armor, unit.upperBody);
+            MakePrimitive("Arrow quiver", PrimitiveType.Cylinder, position + new Vector3(-0.27f, 1.35f, 0.24f) * scale, new Vector3(0.11f, 0.36f, 0.11f) * scale, darkLeather, unit.upperBody).transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
         }
         else
         {
-            MakePrimitive("Hood", PrimitiveType.Sphere, position + new Vector3(0f, 2.01f, 0.08f) * scale, new Vector3(0.39f, 0.4f, 0.38f) * scale, outfit, root.transform);
+            MakePrimitive("Hood", PrimitiveType.Sphere, position + new Vector3(0f, 2.01f, 0.08f) * scale, new Vector3(0.39f, 0.4f, 0.38f) * scale, outfit, unit.upperBody);
         }
-        unit.leftArm = MakePrimitive("Left arm", PrimitiveType.Capsule, position + new Vector3(-0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
-        unit.rightArm = MakePrimitive("Right arm", PrimitiveType.Capsule, position + new Vector3(0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, root.transform).transform;
-        MakePrimitive("Left shoulder guard", PrimitiveType.Sphere, position + new Vector3(-0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, root.transform);
-        MakePrimitive("Right shoulder guard", PrimitiveType.Sphere, position + new Vector3(0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, root.transform);
-        unit.leftLeg = MakePrimitive("Left leg", PrimitiveType.Capsule, position + new Vector3(-0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, root.transform).transform;
-        unit.rightLeg = MakePrimitive("Right leg", PrimitiveType.Capsule, position + new Vector3(0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, root.transform).transform;
-        MakePrimitive("Belt", PrimitiveType.Cylinder, position + new Vector3(0f, 0.74f, 0f) * scale, new Vector3(0.32f, 0.07f, 0.3f) * scale, darkLeather, root.transform);
-        MakePrimitive("Belt clasp", PrimitiveType.Sphere, position + new Vector3(0f, 0.75f, -0.29f) * scale, new Vector3(0.10f, 0.11f, 0.05f) * scale, MakeMetal(new Color(0.72f, 0.48f, 0.20f), 0.55f), root.transform);
-        MakePrimitive("Eyes", PrimitiveType.Sphere, position + new Vector3(0f, 1.89f, -0.30f) * scale, new Vector3(0.16f, 0.055f, 0.035f) * scale, accent, root.transform);
+        unit.leftArm = CreatePivot("Left shoulder pivot", position + new Vector3(-0.39f, 1.42f, 0f) * scale, unit.upperBody);
+        unit.rightArm = CreatePivot("Right shoulder pivot", position + new Vector3(0.39f, 1.42f, 0f) * scale, unit.upperBody);
+        MakePrimitive("Left arm", PrimitiveType.Capsule, position + new Vector3(-0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, unit.leftArm);
+        MakePrimitive("Right arm", PrimitiveType.Capsule, position + new Vector3(0.39f, 1.12f, 0f) * scale, new Vector3(0.17f, 0.43f, 0.17f) * scale, skinMaterial, unit.rightArm);
+        MakePrimitive("Left shoulder guard", PrimitiveType.Sphere, position + new Vector3(-0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, unit.upperBody);
+        MakePrimitive("Right shoulder guard", PrimitiveType.Sphere, position + new Vector3(0.4f, 1.42f, 0f) * scale, new Vector3(0.29f, 0.22f, 0.3f) * scale, armor, unit.upperBody);
+        unit.leftLeg = CreatePivot("Left hip pivot", position + new Vector3(-0.16f, 0.72f, 0f) * scale, unit.upperBody);
+        unit.rightLeg = CreatePivot("Right hip pivot", position + new Vector3(0.16f, 0.72f, 0f) * scale, unit.upperBody);
+        MakePrimitive("Left leg", PrimitiveType.Capsule, position + new Vector3(-0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, unit.leftLeg);
+        MakePrimitive("Right leg", PrimitiveType.Capsule, position + new Vector3(0.16f, 0.38f, 0f) * scale, new Vector3(0.19f, 0.4f, 0.2f) * scale, darkLeather, unit.rightLeg);
+        MakePrimitive("Belt", PrimitiveType.Cylinder, position + new Vector3(0f, 0.74f, 0f) * scale, new Vector3(0.32f, 0.07f, 0.3f) * scale, darkLeather, unit.upperBody);
+        MakePrimitive("Belt clasp", PrimitiveType.Sphere, position + new Vector3(0f, 0.75f, -0.29f) * scale, new Vector3(0.10f, 0.11f, 0.05f) * scale, MakeMetal(new Color(0.72f, 0.48f, 0.20f), 0.55f), unit.upperBody);
+        MakePrimitive("Eyes", PrimitiveType.Sphere, position + new Vector3(0f, 1.89f, -0.30f) * scale, new Vector3(0.16f, 0.055f, 0.035f) * scale, accent, unit.upperBody);
         if (enemy || role == "ranged")
         {
             Material eyeGlow = MakeGlow(new Color(0.95f, 0.12f, 0.08f), 2f);
-            MakePrimitive("Left eye ember", PrimitiveType.Sphere, position + new Vector3(-0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, root.transform);
-            MakePrimitive("Right eye ember", PrimitiveType.Sphere, position + new Vector3(0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, root.transform);
+            MakePrimitive("Left eye ember", PrimitiveType.Sphere, position + new Vector3(-0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, unit.upperBody);
+            MakePrimitive("Right eye ember", PrimitiveType.Sphere, position + new Vector3(0.12f, 1.91f, -0.30f) * scale, new Vector3(0.075f, 0.07f, 0.04f) * scale, eyeGlow, unit.upperBody);
         }
         if (role == "assault")
         {
-            MakePineCrown("Imp horn left", position + new Vector3(-0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), root.transform);
-            MakePineCrown("Imp horn right", position + new Vector3(0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), root.transform);
+            MakePineCrown("Imp horn left", position + new Vector3(-0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), unit.upperBody);
+            MakePineCrown("Imp horn right", position + new Vector3(0.19f, 2.10f, 0.02f) * scale, 0.18f * scale, 0.36f * scale, MakeMaterial(new Color(0.18f, 0.10f, 0.12f)), unit.upperBody);
         }
         if (enemy || role == "tank")
         {
@@ -777,15 +788,25 @@ public sealed class ShadowVeilGame : MonoBehaviour
     {
         unit.phase += dt * (moving ? 11f : 3f);
         unit.attackTime = Mathf.Max(0f, unit.attackTime - dt);
-        float stride = moving ? Mathf.Sin(unit.phase) * 28f : 0f;
+        float stride = moving ? Mathf.Sin(unit.phase) * 34f : 0f;
         float attackProgress = unit.attackTime > 0f ? 1f - unit.attackTime / 0.36f : 0f;
         float swing = attackProgress > 0f ? Mathf.Sin(attackProgress * Mathf.PI) : 0f;
+        float idleBreath = Mathf.Sin(unit.phase) * 1.4f;
         unit.leftLeg.localRotation = Quaternion.Euler(stride, 0f, 0f);
         unit.rightLeg.localRotation = Quaternion.Euler(-stride, 0f, 0f);
-        unit.leftArm.localRotation = Quaternion.Euler(-stride * 0.65f, 0f, swing * 10f);
-        unit.rightArm.localRotation = Quaternion.Euler(stride * 0.65f - swing * 105f, 0f, -swing * 8f);
-        unit.torso.localRotation = Quaternion.Euler(-swing * 8f, 0f, 0f);
-        unit.torso.localPosition = new Vector3(0f, 1f + (moving ? Mathf.Abs(Mathf.Sin(unit.phase)) * 0.045f : Mathf.Sin(unit.phase) * 0.012f), 0f);
+        unit.leftArm.localRotation = Quaternion.Euler(-stride * 0.55f - idleBreath, 0f, swing * 10f);
+        unit.rightArm.localRotation = Quaternion.Euler(stride * 0.55f - swing * 112f - idleBreath, 0f, -swing * 8f);
+        unit.upperBody.localRotation = Quaternion.Euler(-swing * 9f + (moving ? Mathf.Sin(unit.phase * 2f) * 2f : idleBreath * 0.25f), 0f, moving ? Mathf.Sin(unit.phase) * 2f : 0f);
+        unit.torso.localRotation = Quaternion.identity;
+        unit.torso.localPosition = new Vector3(0f, 0.28f * unit.visualScale + (moving ? Mathf.Abs(Mathf.Sin(unit.phase)) * 0.055f : Mathf.Sin(unit.phase) * 0.015f), 0f);
+    }
+
+    private Transform CreatePivot(string name, Vector3 position, Transform parent)
+    {
+        GameObject pivot = new GameObject(name);
+        pivot.transform.SetParent(parent, true);
+        pivot.transform.position = position;
+        return pivot.transform;
     }
 
     private GameObject MakePrimitive(string name, PrimitiveType type, Vector3 position, Vector3 scale, Material material, Transform parent = null)
