@@ -62,7 +62,7 @@ const cards=[
 ];
 function buildDeck(){$('deck').innerHTML=cards.map(c=>'<button class="card" data-card="'+c.id+'" aria-label="'+c.name+', costs '+c.cost+' mana"><span class="card-art" style="--art-pos:'+c.art+'"></span><span class="cost">'+c.cost+'</span><div class="symbol">'+c.symbol+'</div><div class="name">'+c.name+'</div></button>').join('');$('deck').querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>playCard(b.dataset.card)));}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
-function to3(x,y,groundY=0){const s=ppu();return new BABYLON.Vector3((x-W/2)/s,groundY,(H/2-(y-cameraY))/(s*tiltCos));}
+function to3(x,y,groundY=0){const s=ppu();return new BABYLON.Vector3((x-W/2)/s,groundY,(H/2-y)/(s*tiltCos));}
 function resize(){applyViewport();if(player){player.x=clamp(player.x,24,W-24);player.y=clamp(player.y,cameraY+112,cameraY+H-174);}}
 function toast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1450);}
 function reset(){player={x:W/2,y:H*.68,r:12,hp:100,maxHp:100,mana:12,maxMana:26,speed:152,invuln:0,shot:0,sprite:2,hero:true};allies=[];enemies=[];particles=[];bolts=[];crates=[];elapsed=0;timeLeft=210;cameraY=0;spawnTimer=.7;crateTimer=5;kills=0;wave=1;souls=0;bossSpawned=false;focus=null;selectedSpell=null;aimPoint=null;goal=null;ended=false;running=true;$('overlay').style.display='none';toast('The mist is moving…');updateHud();}
@@ -122,7 +122,7 @@ function createCrateModel(c){const root=new BABYLON.TransformNode('reliquary '+c
  return{root,rune};}
 function createParticle(p){const mesh=BABYLON.MeshBuilder.CreateSphere('spell mote',{diameter:.08+Math.random()*.06,segments:5},scene);let m=particleMaterials.get(p.color);if(!m){m=mat('mote '+p.color,p.color,p.color);particleMaterials.set(p.color,m);}mesh.material=m;return mesh;}
 function syncScene(dt){
- const s=ppu(),travel=cameraY/(s*tiltCos);groundRoot.position.z=travel;
+ const s=ppu(),cameraZ=-cameraY/(s*tiltCos),tileIndex=Math.floor(cameraZ/12);camera.target.z=cameraZ;groundRoot.position.z=tileIndex*12;
 groundMeshes.forEach((tile,i)=>{tile.position.z=(i-2)*12;});
  const actors=[player,...allies,...enemies].filter(Boolean),activeActors=new Set(actors);
  for(const [a,v] of actorViews)if(!activeActors.has(a)){v.root.dispose(false,false);actorViews.delete(a);}
