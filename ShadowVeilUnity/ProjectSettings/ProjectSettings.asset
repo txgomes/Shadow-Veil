@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 27
+  productGUID: a9f4c75e96fc4a76bf27b1da29014011
+  AndroidProfiler: 0
+  AndroidFilterTouchesWhenObscured: 0
+  AndroidEnableSustainedPerformanceMode: 0
+  defaultScreenOrientation: 1
+  defaultScreenWidth: 1170
+  defaultScreenHeight: 2532
+  companyName: TX Gomes
+  productName: Shadow Veil
+  applicationIdentifier:
+    Standalone: com.txgomes.shadowveil
+    iPhone: com.txgomes.shadowveil
+    Android: com.txgomes.shadowveil
+  bundleVersion: 0.1.0
+  iPhoneBundleVersion: 1.0.0
+  iOSManualProvisioningProfileID:
+  iOSManualProvisioningProfileType: 0
+  iOSArchitecture: 1
+  iOSTargetOSVersionString: 15.0
+  scriptingBackend:
+    iPhone: 1
+  activeInputHandler: 0
+  m_RenderingPath: 1
+  useHDRDisplay: 0
+  colorSpace: 0
+  graphicsJobs: 0
+  defaultBehaviorMode: 1

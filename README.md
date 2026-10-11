@@ -1,13 +1,13 @@
 # Shadow Veil
 
-Shadow Veil now has a native Unreal Engine project alongside the original browser prototype.
+Shadow Veil is moving to Unity for a native iPhone game. The project lives in `ShadowVeilUnity/` and targets Unity 6.3 LTS.
 
-## Unreal project
+## Unity project
 
-Open `ShadowVeil.uproject` in Unreal Engine 5. The C++ starter creates a long 3D trail, a following mobile camera, and drag-to-move controls. The hero turns toward its current movement direction, and the camera follows as the hero advances.
+Open `ShadowVeilUnity/` in Unity Hub. The initial scene creates a scrolling 3D trail, drag-to-move controls with direction-aware turning, a following camera, simple combat, deployable units, mana cards, and a mobile HUD.
 
-The current Unreal scene is a movement foundation. It does not yet include the old prototype's cards, combat, deployment, character assets, or finished mobile HUD. The existing `index.html` and `game.js` remain the playable browser prototype while those features are ported.
+Character bodies are temporary procedural shapes; imported models, rigged animation, pathfinding, and visual effects remain future work. Add the iOS Build Support module to the Unity Editor installation to make an iPhone build. Xcode is required to compile that build locally.
 
 ## Browser prototype
 
-Open `index.html` in a WebGL-enabled browser, or use the GitHub Pages deployment while it remains enabled.
+The original browser prototype remains in `index.html` and `game.js`; GitHub Pages continues to serve that version.

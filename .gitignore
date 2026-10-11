@@ -9,5 +9,20 @@ Saved/
 *.xcodeproj/
 *.xcworkspace/
 
+# Unity generated files
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+MemoryCaptures/
+Build/
+Builds/
+*.csproj
+*.unityproj
+*.pidb
+*.svd
+*.pdb
+
 # Local reference footage is intentionally kept out of version control.
 *.mp4
