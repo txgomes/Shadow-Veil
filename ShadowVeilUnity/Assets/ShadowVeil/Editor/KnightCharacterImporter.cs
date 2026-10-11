@@ -6,11 +6,48 @@ using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>Imports the CC0 Quaternius knight as a humanoid and prepares its runtime prefab.</summary>
+[InitializeOnLoad]
 public sealed class KnightCharacterImporter : AssetPostprocessor
 {
     private const string ModelPath = "Assets/ShadowVeil/Art/Characters/KnightCharacter.fbx";
     private const string ControllerPath = "Assets/ShadowVeil/Art/Characters/Resources/KnightWarrior.controller";
     private const string PrefabPath = "Assets/ShadowVeil/Art/Characters/Resources/KnightWarrior.prefab";
+
+    static KnightCharacterImporter()
+    {
+        EditorApplication.delayCall += EnsureModelImported;
+    }
+
+    private static void EnsureModelImported()
+    {
+        ModelImporter importer = AssetImporter.GetAtPath(ModelPath) as ModelImporter;
+        if (importer == null) return;
+        ModelImporterClipAnimation[] configuredAnimations = importer.clipAnimations;
+        bool clipsNeedSetup = configuredAnimations == null || configuredAnimations.Length == 0 || configuredAnimations.Any(animation =>
+        {
+            string name = animation.name.ToLowerInvariant();
+            bool shouldLoop = name.Contains("idle") || name.Contains("walking") || name.EndsWith("run");
+            return animation.loopTime != shouldLoop || animation.loopPose != shouldLoop;
+        });
+        if (importer.animationType != ModelImporterAnimationType.Human || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel || !importer.importAnimation || clipsNeedSetup)
+        {
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            importer.importAnimation = true;
+            importer.optimizeGameObjects = false;
+            ModelImporterClipAnimation[] animations = importer.defaultClipAnimations;
+            foreach (ModelImporterClipAnimation animation in animations)
+            {
+                string name = animation.name.ToLowerInvariant();
+                animation.loopTime = name.Contains("idle") || name.Contains("walking") || name.EndsWith("run");
+                animation.loopPose = animation.loopTime;
+            }
+            importer.clipAnimations = animations;
+            importer.SaveAndReimport();
+            return;
+        }
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) BuildRuntimeAssets();
+    }
 
     private void OnPreprocessModel()
     {
