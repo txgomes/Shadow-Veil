@@ -36,6 +36,13 @@ greenBar:mat('Health bar','#76c895','#376d41'),
 redBar:mat('Enemy health bar','#da5263','#872635'),
 white:mat('Rune glow','#e8d9bd','#c7ad78')
 };
+const characterMaterials=new Map();
+function characterMaterial(index){
+ let material=characterMaterials.get(index);if(material)return material;
+ const col=index%4,row=Math.floor(index/4),texture=new BABYLON.Texture('assets/character-atlas.png',scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+ texture.uScale=.25;texture.vScale=.5;texture.uOffset=col*.25;texture.vOffset=(1-row)*.5;texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;texture.hasAlpha=true;
+ material=new BABYLON.StandardMaterial('character art '+index,scene);material.diffuseTexture=texture;material.opacityTexture=texture;material.useAlphaFromDiffuseTexture=true;material.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;material.disableLighting=true;material.emissiveColor=new BABYLON.Color3(.82,.82,.82);material.specularColor=BABYLON.Color3.Black();material.backFaceCulling=false;material.disableDepthWrite=true;characterMaterials.set(index,material);return material;
+}
 const groundRoot=new BABYLON.TransformNode('endless-trail',scene),groundMeshes=[];
 let trailTexture=new BABYLON.Texture('assets/forest-battlefield.webp',scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
 trailTexture.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;trailTexture.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;trailTexture.uScale=1;trailTexture.vScale=1;
@@ -53,10 +60,10 @@ const actorViews=new Map(),crateViews=new Map(),particleViews=new Map(),boltView
 function applyViewport(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;engine.resize();const hw=W/(2*ppu()),hh=H/(2*ppu());camera.orthoLeft=-hw;camera.orthoRight=hw;camera.orthoTop=hh;camera.orthoBottom=-hh;}
 let W=0,H=0,last=0,running=false,ended=false,elapsed=0,timeLeft=210,spawnTimer=0,crateTimer=5,kills=0,wave=1,souls=0,cameraY=0,player,allies=[],enemies=[],particles=[],bolts=[],crates=[],goal=null,focus=null,selectedSpell=null,aimPoint=null,bossSpawned=false,dragging=false;
 const cards=[
-{id:'guard',name:'Graveguard',symbol:'☠',desc:'Tank · melee',cost:5,type:'unit',hp:92,damage:9,range:31,speed:42,rate:.8,color:'#d8c9d5',role:'tank',sprite:1,art:'33.333% 0%'},
-{id:'ranger',name:'Ashen Archer',symbol:'➶',desc:'Ranged damage',cost:8,type:'unit',hp:42,damage:10,range:150,speed:42,rate:1.05,color:'#a4d6c8',role:'ranged',sprite:2,art:'66.666% 0%'},
-{id:'shade',name:'Gloam Imp',symbol:'♆',desc:'Fast · fierce',cost:5,type:'unit',hp:52,damage:17,range:36,speed:76,rate:.58,color:'#e78c77',role:'assault',sprite:3,art:'100% 0%'},
-{id:'oracle',name:'Lantern Seer',symbol:'✺',desc:'Healing · support',cost:18,type:'unit',hp:48,damage:4,range:115,speed:35,rate:1.2,color:'#dfc17e',role:'healer',sprite:4,art:'0% 100%'},
+{id:'guard',name:'Graveguard',symbol:'☠',desc:'Tank · melee',cost:5,type:'unit',hp:92,damage:9,range:31,speed:42,rate:.8,color:'#d8c9d5',role:'tank',sprite:1,artIndex:1,art:'33.333% 0%'},
+{id:'ranger',name:'Ashen Archer',symbol:'➶',desc:'Ranged damage',cost:8,type:'unit',hp:42,damage:10,range:150,speed:42,rate:1.05,color:'#a4d6c8',role:'ranged',sprite:2,artIndex:2,art:'66.666% 0%'},
+{id:'shade',name:'Gloam Imp',symbol:'♆',desc:'Fast · fierce',cost:5,type:'unit',hp:52,damage:17,range:36,speed:76,rate:.58,color:'#e78c77',role:'assault',sprite:3,artIndex:3,art:'100% 0%'},
+{id:'oracle',name:'Lantern Seer',symbol:'✺',desc:'Healing · support',cost:18,type:'unit',hp:48,damage:4,range:115,speed:35,rate:1.2,color:'#dfc17e',role:'healer',sprite:4,artIndex:4,art:'0% 100%'},
 {id:'ember',name:'Cinderburst',symbol:'✧',desc:'Spell · blast',cost:2,type:'spell',spell:'ember',color:'#ff9a72',art:'66.666% 100%'},
 {id:'frost',name:'Rime Veil',symbol:'❄',desc:'Spell · slow',cost:5,type:'spell',spell:'frost',color:'#8ce9ed',art:'33.333% 100%'}
 ];
@@ -67,9 +74,9 @@ function resize(){applyViewport();if(player){player.x=clamp(player.x,24,W-24);pl
 function toast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1450);}
 function reset(){player={x:W/2,y:H*.68,r:12,hp:100,maxHp:100,mana:12,maxMana:26,speed:152,invuln:0,shot:0,sprite:2,hero:true};allies=[];enemies=[];particles=[];bolts=[];crates=[];elapsed=0;timeLeft=210;cameraY=0;spawnTimer=.7;crateTimer=5;kills=0;wave=1;souls=0;bossSpawned=false;focus=null;selectedSpell=null;aimPoint=null;goal=null;ended=false;running=true;$('overlay').style.display='none';toast('The mist is moving…');updateHud();}
 function nearest(from,range){let t=null,b=range||Infinity;for(const e of enemies){const d=dist(from,e);if(d<b){b=d;t=e;}}return t;}
-function spawnEnemy(kind){const x=W*.2+Math.random()*W*.6,boss=kind==='boss',tough=boss||Math.random()<.18+wave*.035,hp=boss?360:(tough?64+wave*7:31+wave*3);enemies.push({x:x,y:cameraY+H*(.18+Math.random()*.1),r:boss?25:(tough?15:11),hp:hp,maxHp:hp,damage:boss?18:(tough?12:7),speed:boss?17:(tough?24+wave:31+wave),attackCd:.5+Math.random(),color:boss?'#b74664':(tough?'#bd687c':'#8171a0'),tough:tough,boss:boss,slow:0,sprite:boss?7:(tough?6:5),attackPulse:0});}
+function spawnEnemy(kind){const x=W*.2+Math.random()*W*.6,boss=kind==='boss',tough=boss||Math.random()<.18+wave*.035,hp=boss?360:(tough?64+wave*7:31+wave*3);enemies.push({x:x,y:cameraY+H*(.18+Math.random()*.1),r:boss?25:(tough?15:11),hp:hp,maxHp:hp,damage:boss?18:(tough?12:7),speed:boss?17:(tough?24+wave:31+wave),attackCd:.5+Math.random(),color:boss?'#b74664':(tough?'#bd687c':'#8171a0'),tough:tough,boss:boss,slow:0,sprite:boss?7:(tough?6:5),artIndex:boss?6:(tough?5:1),attackPulse:0});}
 function spawnCrate(){const roll=Math.random(),type=roll<.4?'health':roll<.75?'mana':'soul';crates.push({x:W*.18+Math.random()*W*.64,y:cameraY+H*.24,type:type,r:13,phase:Math.random()*6});}
-function playCard(id){if(!running||ended)return;const c=cards.find(x=>x.id===id);if(!c)return;if(selectedSpell&&selectedSpell.id===id){selectedSpell=null;aimPoint=null;toast('Spell cancelled');updateHud();return;}if(player.mana<c.cost){toast('Not enough mana');return;}if(c.type==='spell'){selectedSpell=c;aimPoint={x:player.x,y:player.y};toast('Tap the battlefield to aim '+c.name);updateHud();return;}selectedSpell=null;aimPoint=null;if(allies.length>=7){toast('Seven allies already on the trail');return;}player.mana-=c.cost;const a=Object.assign({},c,{x:player.x,y:player.y,r:c.role==='tank'?12:10,cd:.25,maxHp:c.hp,slow:0,attackPulse:0});const slots=[[-42,-24],[42,-24],[-58,8],[58,8],[-30,42],[30,42],[0,-58]];let spot=slots.find(([x,y])=>![player,...allies].some(u=>Math.hypot(u.x-(player.x+x),u.y-(player.y+y))<u.r+16));if(!spot)spot=slots[allies.length%slots.length];a.x=clamp(player.x+spot[0],25,W-25);a.y=player.y+spot[1];allies.push(a);burst(a.x,a.y,c.color,10);toast(c.name+' summoned');updateHud();}
+function playCard(id){if(!running||ended)return;const c=cards.find(x=>x.id===id);if(!c)return;if(selectedSpell&&selectedSpell.id===id){selectedSpell=null;aimPoint=null;toast('Spell cancelled');updateHud();return;}if(player.mana<c.cost){toast('Not enough mana');return;}if(c.type==='spell'){selectedSpell=c;aimPoint={x:player.x,y:player.y};toast('Tap the battlefield to aim '+c.name);updateHud();return;}selectedSpell=null;aimPoint=null;if(allies.length>=7){toast('Seven allies already on the trail');return;}player.mana-=c.cost;const a=Object.assign({},c,{x:player.x,y:player.y,r:c.role==='tank'?12:10,cd:.25,maxHp:c.hp,slow:0,attackPulse:0});const slots=[[-96,-38],[96,-38],[-112,24],[112,24],[-80,86],[80,86],[0,-118]];let spot=slots.find(([x,y])=>![player,...allies].some(u=>Math.hypot(u.x-(player.x+x),u.y-(player.y+y))<Math.max(74,u.r+30)));if(!spot)spot=slots[allies.length%slots.length];a.x=clamp(player.x+spot[0],25,W-25);a.y=player.y+spot[1];allies.push(a);burst(a.x,a.y,c.color,10);toast(c.name+' summoned');updateHud();}
 function castSpell(c,center){const radius=c.spell==='ember'?66:84,target=nearest(center,radius);if(target)bolts.push({x:player.x,y:player.y,target:target,life:.26,color:c.color});burst(center.x,center.y,c.color,18);for(const e of [...enemies])if(dist(e,center)<radius){if(c.spell==='ember'){e.hp-=78;burst(e.x,e.y,c.color,12);if(e.hp<=0)killEnemy(e);}else{e.slow=3.2;burst(e.x,e.y,c.color,6);}}if(c.spell==='frost')for(const a of allies)if(dist(a,center)<radius)a.hp=Math.min(a.maxHp,a.hp+8);toast(c.spell==='ember'?'Cinderburst!':'Rime Veil slows the wraiths');}
 function breakCrate(c){const i=crates.indexOf(c);if(i<0)return;crates.splice(i,1);if(c.type==='health'){const restored=Math.min(30,player.maxHp-player.hp);player.hp=Math.min(player.maxHp,player.hp+30);toast(restored?'+30 HP':'+5 mana');if(!restored)player.mana=Math.min(player.maxMana,player.mana+5);}else if(c.type==='mana'){player.mana=Math.min(player.maxMana,player.mana+8);toast('+8 mana');}else{souls+=3;toast('+3 souls');}burst(c.x,c.y,c.type==='health'?'#8bcbb9':c.type==='mana'?'#75d8dc':'#d6b477',12);updateHud();}
 function killEnemy(e){const i=enemies.indexOf(e);if(i<0)return;enemies.splice(i,1);if(e.boss){souls+=12;burst(e.x,e.y,e.color,34);endGame(true);return;}kills++;souls+=e.tough?3:1;player.mana=Math.min(player.maxMana,player.mana+(e.tough?7:4));burst(e.x,e.y,e.color,13);const n=Math.min(3,1+Math.floor(kills/5));if(n>wave){wave=n;toast('Trail '+wave+' · deeper into the mist');}if(kills>=15&&!bossSpawned){bossSpawned=true;spawnEnemy('boss');toast('The Ashen Bellkeeper appears!');}updateHud();}
@@ -87,30 +94,14 @@ for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy*=.96;p.life-=
 function createPart(parent,kind,name,opts,material){const mesh=BABYLON.MeshBuilder[kind](name,opts,scene);mesh.parent=parent;mesh.material=material;mesh.isPickable=false;return mesh;}
 function limb(parent,name,material,length=.48,radius=.09){const pivot=new BABYLON.TransformNode(name+' pivot',scene);pivot.parent=parent;const mesh=createPart(pivot,'CreateCylinder',name,{height:length,diameterTop:radius*1.55,diameterBottom:radius*1.9,tessellation:7},material);mesh.position.y=-length*.48;const cuff=createPart(pivot,'CreateSphere',name+' joint',{diameter:radius*2.4,segments:6},material);cuff.position.y=.02;return pivot;}
 function createActorModel(a){
- const root=new BABYLON.TransformNode('actor '+(a.name||a.role||'hero'),scene),scale=a.boss?1.4:a.hero?1.08:a.role==='assault'?.84:1;
- root.scaling.setAll(scale);
- const palette=a.hero?{body:mats.leather,accent:mats.gold,skin:mats.skin,hair:mats.hair,weapon:mats.iron}:a.boss?{body:mats.red,accent:mats.gold,skin:mats.bone,hair:mats.boneShade,weapon:mats.iron}:a.tough||a.sprite>=5?{body:mats.boneShade,accent:mats.red,skin:mats.bone,hair:mats.boneShade,weapon:mats.iron}:a.role==='ranged'?{body:mats.teal,accent:mats.gold,skin:mats.skin,hair:mats.hair,weapon:mats.gold}:a.role==='assault'?{body:mats.ember,accent:mats.red,skin:mats.ember,hair:mats.boneShade,weapon:mats.iron}:a.role==='healer'?{body:mats.teal,accent:mats.gold,skin:mats.skin,hair:mats.gold,weapon:mats.gold}:{body:mats.iron,accent:mats.bone,skin:mats.bone,hair:mats.boneShade,weapon:mats.iron};
- const shadow=createPart(root,'CreateSphere','soft ground shadow',{diameter:1,segments:8},mats.shadow);shadow.scaling.set(.47,.045,.25);shadow.position.set(0,.04,0);
- const torso=createPart(root,'CreateCylinder','armoured torso',{height:.72,diameterTop:.28,diameterBottom:.47,tessellation:8},palette.body);torso.position.y=.82;
- const waist=createPart(root,'CreateCylinder','waist armour',{height:.2,diameterTop:.4,diameterBottom:.34,tessellation:8},palette.accent);waist.position.y=.48;
- const chest=createPart(root,'CreateBox','breastplate detail',{width:.34,height:.18,depth:.065},palette.accent);chest.position.set(0,.87,-.2);
- const head=createPart(root,'CreateSphere','head',{diameter:.39,segments:8},palette.skin);head.scaling.set(.88,1.06,.82);head.position.set(0,1.36,-.015);
- const hair=createPart(root,'CreateSphere','hair or skull cap',{diameter:.41,segments:7},palette.hair);hair.scaling.set(1,.63,.92);hair.position.set(0,1.52,.025);
- if(a.tough||a.boss||a.sprite>=5){for(const side of [-1,1]){const eye=createPart(root,'CreateSphere','wraith eye',{diameter:.055,segments:5},mats.red);eye.position.set(side*.085,1.39,-.195);}const ribMat=palette.accent;for(let i=0;i<3;i++){const rib=createPart(root,'CreateCylinder','rib '+i,{height:.045,diameterTop:.39-i*.045,diameterBottom:.39-i*.045,tessellation:8},ribMat);rib.rotation.z=Math.PI/2;rib.position.set(0,.85-i*.13,-.235);}}
- const shoulderL=createPart(root,'CreateSphere','left pauldron',{diameter:.23,segments:7},palette.accent);shoulderL.position.set(-.28,1.08,0);
- const shoulderR=createPart(root,'CreateSphere','right pauldron',{diameter:.23,segments:7},palette.accent);shoulderR.position.set(.28,1.08,0);
- const armL=limb(root,'left arm',palette.body,.52,.095);armL.position.set(-.29,1.02,0);
- const armR=limb(root,'right arm',palette.body,.52,.095);armR.position.set(.29,1.02,0);
- const legL=limb(root,'left leg',palette.body,.53,.105);legL.position.set(-.13,.47,0);
- const legR=limb(root,'right leg',palette.body,.53,.105);legR.position.set(.13,.47,0);
- const bootL=createPart(legL,'CreateBox','left boot',{width:.2,height:.11,depth:.33},palette.weapon);bootL.position.set(0,-.48,-.06);
- const bootR=createPart(legR,'CreateBox','right boot',{width:.2,height:.11,depth:.33},palette.weapon);bootR.position.set(0,-.48,-.06);
- const weapon=createPart(armR,'CreateCylinder','weapon shaft',{height:a.role==='ranged'?.7:.62,diameterTop:.035,diameterBottom:.055,tessellation:6},palette.weapon);weapon.position.set(.05,-.42,-.08);weapon.rotation.z=-.42;
- const blade=createPart(armR,'CreateCylinder','weapon blade',{height:.36,diameterTop:.005,diameterBottom:.14,tessellation:5},a.role==='healer'?palette.accent:palette.weapon);blade.position.set(.05,-.11,-.09);blade.rotation.z=-.42;
- const barBack=createPart(root,'CreateBox','health bar frame',{width:.62,height:.055,depth:.035},mats.boneShade);barBack.position.set(0,1.92,0);
- const bar=createPart(root,'CreateBox','health bar fill',{width:.58,height:.033,depth:.04},a.hero||a.role?mats.greenBar:mats.redBar);bar.position.set(0,1.92,-.025);
+ const root=new BABYLON.TransformNode('actor '+(a.name||a.role||'hero'),scene);
+ const shadow=createPart(root,'CreateSphere','soft ground shadow',{diameter:1,segments:12},mats.shadow);shadow.scaling.set(.5,.045,.29);shadow.position.set(0,.04,0);
+ const height=a.boss?2.85:a.role==='assault'?1.45:a.hero?2.28:2.08,width=height*.72;
+ const sprite=BABYLON.MeshBuilder.CreatePlane('illustrated character',{width,height},scene);sprite.parent=root;sprite.position.y=height*.51;sprite.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;sprite.material=characterMaterial(a.artIndex??(a.hero?0:1));sprite.isPickable=false;
+ const barBack=createPart(root,'CreateBox','health bar frame',{width:.68,height:.055,depth:.035},mats.boneShade);barBack.position.set(0,height+.17,0);
+ const bar=createPart(root,'CreateBox','health bar fill',{width:.64,height:.033,depth:.04},a.hero||a.role?mats.greenBar:mats.redBar);bar.position.set(0,height+.17,-.025);
  const focusRing=BABYLON.MeshBuilder.CreateTorus('target ring',{diameter:.78,thickness:.035,tessellation:20},scene);focusRing.parent=root;focusRing.position.y=.08;focusRing.rotation.x=Math.PI/2;focusRing.material=ringMat;focusRing.isPickable=false;focusRing.isVisible=false;
- return{root,armL,armR,legL,legR,bar,focusRing,scale,phase:Math.random()*5,lastX:a.x,lastY:a.y};
+ return{root,sprite,bar,focusRing,height,width,phase:Math.random()*5,lastX:a.x,lastY:a.y};
 }
 function ensureActor(a){let v=actorViews.get(a);if(!v){v=createActorModel(a);actorViews.set(a,v);}return v;}
 function createCrateModel(c){const root=new BABYLON.TransformNode('reliquary '+c.type,scene),m=c.type==='health'?mats.health:c.type==='mana'?mats.mana:mats.soul;
@@ -127,12 +118,13 @@ groundMeshes.forEach((tile,i)=>{tile.position.z=(i-2)*12;});
  const actors=[player,...allies,...enemies].filter(Boolean),activeActors=new Set(actors);
  for(const [a,v] of actorViews)if(!activeActors.has(a)){v.root.dispose(false,false);actorViews.delete(a);}
  for(const a of actors){const v=ensureActor(a),pos=to3(a.x,a.y,0);v.root.position.x=pos.x;v.root.position.z=pos.z;v.root.position.y=.03;
-  const dx=a.x-v.lastX,dy=a.y-v.lastY,moved=Math.hypot(dx,dy)>.12;v.lastX=a.x;v.lastY=a.y;v.phase+=dt*(moved?10:2.5);const swing=moved?Math.sin(v.phase)*.62:Math.sin(v.phase)*.035;
-  v.legL.rotation.x=swing;v.legR.rotation.x=-swing;v.armL.rotation.x=-swing*.68;v.armR.rotation.x=swing*.68-(a.attackPulse?Math.sin((.3-a.attackPulse)*Math.PI/.3)*1.35:0);
+  const dx=a.x-v.lastX,dy=a.y-v.lastY,moved=Math.hypot(dx,dy)>.12;v.lastX=a.x;v.lastY=a.y;v.phase+=dt*(moved?10:2.5);
+  const attack=a.attackPulse>0?Math.sin((.3-a.attackPulse)*Math.PI/.3):0;
   if(a.attackPulse>0)a.attackPulse=Math.max(0,a.attackPulse-dt);
-  if(moved)v.root.rotation.y=Math.atan2(dx,-dy);
+  v.sprite.position.y=v.height*.51+(moved?Math.abs(Math.sin(v.phase))*.075:Math.sin(v.phase)*.025)+attack*.06;
+  v.sprite.rotation.z=moved?clamp(-dx/150,-.12,.12):Math.sin(v.phase)*.018;v.sprite.scaling.x=1+attack*.045;v.sprite.scaling.y=1-attack*.025;
   v.root.position.y=a.invuln>0&&Math.floor(elapsed*18)%2?.1:.03;
-  v.bar.scaling.x=Math.max(.02,.58*clamp(a.hp/a.maxHp,0,1));v.bar.position.x=-(.58-v.bar.scaling.x)*.5;
+  v.bar.scaling.x=Math.max(.02,.64*clamp(a.hp/a.maxHp,0,1));v.bar.position.x=-(.64-v.bar.scaling.x)*.5;
   v.focusRing.isVisible=focus===a;v.focusRing.rotation.z=elapsed*.65;
  }
  const activeCrates=new Set(crates);for(const [c,v] of crateViews)if(!activeCrates.has(c)){v.root.dispose(false,false);if(v.rune.material)v.rune.material.dispose(true,true);crateViews.delete(c);}
