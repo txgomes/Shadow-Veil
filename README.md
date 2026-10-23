@@ -11,3 +11,7 @@ Character bodies are temporary procedural shapes; imported models, rigged animat
 ## Browser prototype
 
 The original browser prototype remains in `index.html` and `game.js`; GitHub Pages continues to serve that version.
+
+## Pacto dos Invocadores
+
+O protótipo web do jogo novo fica em `pacto/` e é publicado em https://txgomes.github.io/Shadow-Veil/pacto/. O projeto Unity está na branch `summoner-mvp`.
