@@ -3,37 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0c0a10">
+<meta name="theme-color" content="#0b090d">
 <title>Pacto dos Invocadores</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600;700&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600;700&family=Figtree:wght@400;600;800;900&display=swap">
 <style>
 *{box-sizing:border-box} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} body{margin:0;font-size:14px} [hidden]{display:none!important}
 </style>
 <style>
-/* Layout: portrait, one-thumb. The 3D crypt fills the screen; HUD hugs the top and the 6-card deck the bottom. Single dark look by choice. */
+/* Layout: portrait 9:16 frame. Resource bar pinned on top, six-tab bar pinned at the thumb; windows open as dark worn panels in between. Single dark look by choice. */
 :root {
-  --void: #0c0a10;
-  --stone: #1a1620;
-  --panel: rgba(22, 18, 28, 0.94);
-  --edge: #5a4a36;
-  --bronze: #b08a52;
-  --ink: #ece4d8;
-  --muted: #a39686;
-  --blood: #c8413f;
-  --mana: #8c5cf0;
+  --void: #0b090d;
+  --panel: #141016;
+  --panel-2: #1d1720;
+  --bronze: #a8824c;
+  --bronze-hi: #d8b57a;
+  --ink: #eee6da;
+  --beige: #e3cfa8;
+  --muted: #9d9183;
+  --blood: #c23a36;
+  --gem: #e0344a;
+  --gold: #f0c057;
+  --mana: #8b54ee;
+  --go: #3f9a4a;
   --heal: #5fc48a;
+  --r0: #8d8d8d; --r1: #3f7fd6; --r2: #c047c8; --r3: #e2a83a;
   --display: "Cormorant SC", "Palatino Linotype", Georgia, serif;
   --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
 html, body { height: 100%; }
 body { background: var(--void); color: var(--ink); font-family: var(--body); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
-#app { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; }
+#app { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; background: var(--void); }
 @media (min-width: 560px) { #app { border-left: 1px solid #2a2230; border-right: 1px solid #2a2230; } }
 #stage { position: absolute; inset: 0; }
 #stage canvas { display: block; width: 100%; height: 100%; }
 #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+#ui > * { pointer-events: auto; }
 .hpb { position: absolute; width: 38px; height: 5px; background: #000c; transform: translate(-50%, -50%); clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%); }
 .hpb i { display: block; height: 100%; background: var(--blood); }
 .hpb.ally i { background: var(--heal); }
@@ -41,88 +48,185 @@ body { background: var(--void); color: var(--ink); font-family: var(--body); ove
 .pop { position: absolute; transform: translate(-50%, -50%); font-weight: 800; font-size: 15px; text-shadow: 0 2px 0 #000, 0 0 5px #000; animation: rise 0.8s ease-out forwards; white-space: nowrap; }
 .pop.big { font-size: 20px; font-family: var(--display); }
 @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .pop { animation-duration: 0.01s; } }
+@media (prefers-reduced-motion: reduce) { .pop, .banner { animation-duration: 0.01s; } }
 
-button { font: inherit; color: inherit; cursor: pointer; }
-button:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
-.btn { background: linear-gradient(#2a2230, #1b1620); border: 1px solid var(--edge); border-radius: 4px; padding: 11px 16px; font-weight: 600; letter-spacing: 0.02em; }
-.btn:hover:not(:disabled) { border-color: var(--bronze); }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn.gold { background: linear-gradient(#c9a063, #8d6a37); color: #1b1006; border-color: #e3c38a; font-weight: 800; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+button:focus-visible { outline: 2px solid var(--bronze-hi); outline-offset: 2px; }
+.btn { background: linear-gradient(#2a2128, #17121a); border: 1px solid var(--bronze); border-radius: 3px; padding: 10px 14px; font-weight: 800; letter-spacing: 0.02em; box-shadow: inset 0 1px 0 #ffffff14, 0 2px 0 #000; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.go { background: linear-gradient(#56b05c, #2b6e33); border-color: #9be09f; color: #f2fff2; }
+.btn.red { background: linear-gradient(#d44a40, #7d1d1b); border-color: #f0a090; }
+.btn.purple { background: linear-gradient(#8a5ad8, #46277e); border-color: #c9a8ff; }
+.btn.sm { padding: 6px 10px; font-size: 13px; }
 
-.layer { position: absolute; inset: 0; display: flex; flex-direction: column; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); padding-block: 10px 12px; }
-.layer.pass { pointer-events: none; }
-.layer.pass > * { pointer-events: auto; }
-.scrim { background: radial-gradient(ellipse at 50% 30%, #0c0a10aa, #0c0a10f2 70%); }
+/* Resource bar */
+.res { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 6px; padding-block: 8px; padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); background: linear-gradient(#0b090df0, #0b090d00); }
+.cur { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 3px 0 4px; border-radius: 13px; background: #000c; border: 1px solid #3a2f2a; font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cur svg { width: 18px; height: 18px; }
+.cur .plus { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(#56b05c, #2b6e33); display: grid; place-items: center; font-weight: 900; font-size: 15px; line-height: 1; }
+.res .spacer { flex: 1; }
+.ico { position: relative; width: 30px; height: 30px; border-radius: 4px; background: #000b; border: 1px solid #3a2f2a; display: grid; place-items: center; }
+.ico svg { width: 18px; height: 18px; }
+.dot { position: absolute; top: -3px; right: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--blood); font-size: 9px; font-weight: 900; display: grid; place-items: center; }
 
-.topbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.title-sm { font-family: var(--display); font-size: 20px; color: var(--bronze); margin-right: auto; }
-.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 3px; background: #000a; border: 1px solid #3a3040; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
-.gem { width: 8px; height: 8px; transform: rotate(45deg); }
+/* Tab bar */
+.tabs { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: 2px; padding-left: max(6px, env(safe-area-inset-left, 0px)); padding-right: max(6px, env(safe-area-inset-right, 0px)); padding-block: 10px 8px; background: linear-gradient(#0b090d00, #0b090df5 35%); }
+.tab { display: grid; justify-items: center; gap: 3px; color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: 0.03em; }
+.tab .disc { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(#2a2128, #110d13); border: 2px solid #4a3c30; box-shadow: 0 2px 6px #000; transition: transform 0.15s; }
+.tab .disc svg { width: 24px; height: 24px; }
+.tab.on { color: var(--beige); }
+.tab.on .disc { transform: scale(1.18) translateY(-4px); border-color: var(--bronze-hi); box-shadow: 0 0 14px #d8b57a55, 0 2px 6px #000; }
+.tab .soon { font-size: 8.5px; color: #6f665c; font-weight: 600; }
 
-.home { margin: auto 0 2vh; display: grid; gap: 10px; text-align: center; }
-.home h1 { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 11vw, 58px); line-height: 0.95; margin: 0; color: #e7d3b0; text-shadow: 0 0 24px #8c5cf066, 0 3px 0 #000; text-wrap: balance; }
-.home .tag { color: var(--muted); margin: 4px 0 14px; font-size: 14px; }
-.home .btn { padding: 14px; font-size: 17px; }
-.home .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Lobby */
+.lobby-left { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); top: 52px; z-index: 3; display: grid; gap: 8px; }
+.sq { width: 46px; height: 46px; border-radius: 6px; background: linear-gradient(#2a2128, #110d13); border: 1px solid #5a4632; display: grid; place-items: center; position: relative; box-shadow: 0 2px 6px #000; }
+.sq svg { width: 26px; height: 26px; }
+.sq span.lbl { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.lobby-title { position: absolute; top: 50px; right: max(12px, env(safe-area-inset-right, 0px)); z-index: 3; text-align: right; font-family: var(--display); font-size: 26px; line-height: 0.95; color: var(--beige); text-shadow: 0 0 18px #8b54ee55, 0 2px 0 #000; }
+.pcard { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); bottom: 96px; z-index: 3; width: min(220px, 56%); background: linear-gradient(90deg, #0b090ddd, #0b090d55); border-left: 3px solid var(--bronze); padding: 8px 10px; }
+.pcard .t { font-size: 11px; color: var(--bronze-hi); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.pcard .n { font-family: var(--display); font-size: 24px; line-height: 1.05; color: var(--beige); }
+.xp { height: 5px; background: #000; margin-top: 5px; }
+.xp i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a2a, var(--gold)); }
+.pcard .btns { display: flex; gap: 6px; margin-top: 8px; }
+.play { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 100px; z-index: 3; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(#d44a40, #5a1212 70%); border: 3px solid #f0a090; box-shadow: 0 0 22px #c23a3688, 0 3px 0 #000; display: grid; place-items: center; text-align: center; font-family: var(--display); font-size: 21px; line-height: 0.95; color: #fff3e6; text-shadow: 0 2px 0 #000; }
+.play small { display: block; font-family: var(--body); font-size: 10px; font-weight: 800; margin-top: 3px; }
 
-.sheet { margin-top: 10px; background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 14px; overflow: auto; flex: 1; min-height: 0; }
-.sheet h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0 0 2px; color: #e7d3b0; text-wrap: balance; }
-.sheet p.sub { color: var(--muted); margin: 0 0 12px; line-height: 1.45; font-size: 14px; }
-.sheet h3 { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bronze); margin: 14px 0 8px; }
-
-.map { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.node { aspect-ratio: 1; border-radius: 50%; border: 2px solid #3a3040; background: radial-gradient(#2a2230, #120f16); display: grid; place-items: center; font-family: var(--display); font-size: 20px; font-weight: 700; }
-.node.done { border-color: var(--bronze); color: #e7d3b0; }
-.node.next { border-color: var(--mana); box-shadow: 0 0 14px #8c5cf088; }
-.node.boss { border-radius: 8px; }
-.node:disabled { opacity: 0.35; cursor: default; }
-
+/* Windows */
+.win { position: absolute; z-index: 4; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: 46px; bottom: 82px; display: flex; flex-direction: column; background: linear-gradient(#17121a, #0e0b10); border: 1px solid var(--bronze); box-shadow: 0 0 0 1px #000, inset 0 0 40px #000, 0 10px 40px #000c; }
+.win.full { bottom: 8px; }
+.win-h { position: relative; padding: 10px 44px; text-align: center; border-bottom: 1px solid #3a2f2a; background: linear-gradient(#221a20, #120e14); }
+.win-h h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 23px; color: var(--beige); letter-spacing: 0.04em; text-wrap: balance; }
+.win-h .x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 1px solid #5a4632; border-radius: 3px; background: #0b090d; font-size: 18px; font-weight: 900; color: var(--beige); }
+.win-h .bk { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); }
+.win-b { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+.win-f { padding: 10px 12px; border-top: 1px solid #3a2f2a; display: flex; gap: 8px; }
+.win-f .btn { flex: 1; }
+.sub { color: var(--muted); margin: 0 0 10px; line-height: 1.45; font-size: 13.5px; }
+.h3 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bronze-hi); margin: 12px 0 8px; display: flex; justify-content: space-between; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 3px; background: #000a; border: 1px solid #3a3040; font-weight: 600; font-size: 12px; }
 .foes { display: flex; flex-wrap: wrap; gap: 6px; }
-.deckgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
-.cardv { position: relative; border-radius: 6px; border: 1px solid #3a3040; background: #15111a; padding: 0; text-align: left; overflow: hidden; display: grid; grid-template-rows: 62px auto; }
-.cardv .art { position: relative; overflow: hidden; }
-.cardv .art canvas { width: 100%; height: 100%; display: block; }
-.cardv .cost { position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 12px; background: radial-gradient(#b48cff, #4b2a8f); border: 1px solid #d9c6ff; box-shadow: 0 1px 4px #000; }
-.cardv .lv { position: absolute; top: 5px; right: 5px; font-size: 11px; font-weight: 800; background: #000b; padding: 1px 5px; border-radius: 3px; }
-.cardv .nm { padding: 5px 6px 6px; font-size: 12px; font-weight: 700; line-height: 1.15; }
-.cardv .nm small { display: block; font-weight: 400; color: var(--muted); font-size: 10.5px; margin-top: 2px; }
-.cardv.sel { border-color: var(--mana); box-shadow: 0 0 0 1px var(--mana), 0 0 12px #8c5cf066; }
-.cardv.r2 { border-color: #3f6aa8; } .cardv.r3 { border-color: #8a4fc8; } .cardv.r4 { border-color: #d0a14a; }
-.cardv.sel.r2, .cardv.sel.r3, .cardv.sel.r4 { border-color: var(--mana); }
-.bottombar { display: flex; gap: 10px; margin-top: 10px; }
-.bottombar .btn { flex: 1; }
 
-.hud-top { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
-.herohp { position: relative; height: 16px; background: #000c; border: 1px solid #4a3a2c; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+/* Cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 7px; }
+.grid.six { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.cv { position: relative; aspect-ratio: 3 / 4; border: 2px solid var(--r0); border-radius: 4px; background: #110d13; overflow: hidden; text-align: left; }
+.cv.r1 { border-color: var(--r1); } .cv.r2 { border-color: var(--r2); } .cv.r3 { border-color: var(--r3); }
+.cv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hex { position: absolute; z-index: 2; top: 2px; left: 2px; width: 21px; height: 23px; display: grid; place-items: center; font-weight: 900; font-size: 11.5px; background: linear-gradient(#a77cf5, #4a2690); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); text-shadow: 0 1px 1px #000; }
+.lvband { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 2px 3px; background: linear-gradient(#0000, #000d 40%); font-size: 9.5px; font-weight: 800; text-align: center; line-height: 1.1; }
+.lvband b { display: block; font-size: 9px; color: var(--beige); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uparrow { position: absolute; z-index: 2; top: 3px; right: 3px; width: 14px; height: 14px; background: var(--go); clip-path: polygon(50% 0, 100% 60%, 70% 60%, 70% 100%, 30% 100%, 30% 60%, 0 60%); }
+.cv.sel { box-shadow: 0 0 0 2px #fff, 0 0 12px #fff8; }
+.cv.empty { border-style: dashed; border-color: #3a3040; }
+.cv.ghost { opacity: 0.35; }
+.detail { margin-top: 10px; background: #0b090d; border: 1px solid #3a2f2a; padding: 10px; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; }
+.detail .st { display: grid; grid-template-columns: auto auto; gap: 2px 10px; font-size: 12px; color: var(--muted); }
+.detail .st b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.copies { height: 12px; background: #000; border: 1px solid #333; position: relative; margin: 6px 0; }
+.copies i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2b6e33, #56b05c); }
+.copies span { position: relative; display: block; font-size: 9.5px; line-height: 11px; text-align: center; font-weight: 800; }
+.detail .acts { grid-column: 1 / -1; display: flex; gap: 8px; }
+.detail .acts .btn { flex: 1; }
+
+/* Village */
+.sign { text-align: center; margin: 0 auto 10px; padding: 8px 16px; width: fit-content; background: linear-gradient(#6a4a2c, #3e2a18); border: 2px solid #2a1a0e; border-radius: 4px; font-family: var(--display); font-size: 22px; color: #f1dcb4; text-shadow: 0 2px 0 #1a0e06; box-shadow: 0 3px 0 #000; }
+.shops { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.shop { position: relative; aspect-ratio: 4 / 5; border: 1px solid var(--bronze); overflow: hidden; text-align: left; background: #110d13; }
+.shop canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.shop .lab { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 8px; background: linear-gradient(#0000, #000e); }
+.shop .lab b { display: block; font-family: var(--display); font-size: 19px; color: var(--beige); }
+.shop .lab span { font-size: 11px; color: var(--muted); }
+.npc { display: grid; gap: 10px; }
+.npc .portrait { position: relative; height: 210px; border: 1px solid #3a2f2a; overflow: hidden; }
+.npc .portrait canvas { width: 100%; height: 100%; display: block; }
+.npc .nm { font-family: var(--display); font-size: 22px; color: var(--gold); }
+.hearts { color: var(--gem); letter-spacing: 2px; font-size: 14px; }
+.hearts .off { color: #3a2f2a; }
+.speech { background: #0b090d; border: 1px solid #3a2f2a; padding: 10px 12px; line-height: 1.45; font-size: 14px; position: relative; }
+.opts { display: grid; gap: 6px; }
+.opts .btn { text-align: left; display: flex; gap: 10px; align-items: center; }
+.offer { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px; background: #0b090d; border: 1px solid #2a2228; margin-bottom: 6px; }
+.offer .cv { aspect-ratio: 3 / 4; }
+.offer .t b { display: block; font-size: 13px; }
+.offer .t span { font-size: 11.5px; color: var(--muted); }
+.timer { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* World map */
+.parch { position: relative; aspect-ratio: 3 / 4; max-height: 100%; margin: 0 auto; border: 1px solid #5a4632; background: radial-gradient(ellipse at 50% 45%, #cdb68c, #9c8358 60%, #2a1f14 100%); overflow: hidden; }
+.parch canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.region { position: absolute; transform: translate(-50%, -50%); text-align: center; color: #1c120a; font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 1; text-shadow: 0 0 6px #e6d2a8; }
+.region small { display: block; font-family: var(--body); font-size: 10px; font-weight: 800; margin-top: 2px; }
+.region.locked { opacity: 0.55; }
+.region.open::before { content: ""; display: block; width: 22px; height: 22px; margin: 0 auto 3px; border-radius: 50%; background: radial-gradient(#ff6a5a, #7a1010); box-shadow: 0 0 12px #ff3b2b; }
+.diff { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px; font-family: var(--display); font-size: 18px; color: var(--beige); }
+.zone { position: relative; aspect-ratio: 3 / 4.4; margin: 0 auto; border: 1px solid #3a2f2a; background: radial-gradient(ellipse at 50% 20%, #3a1e22, #120c10 70%); overflow: hidden; }
+.zone canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.znode { position: absolute; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(#3a2e28, #120e10); border: 2px solid #5a4632; display: grid; place-items: center; font-weight: 900; font-size: 15px; box-shadow: 0 2px 6px #000; }
+.znode.done { border-color: var(--bronze-hi); color: var(--beige); }
+.znode.next { border-color: #fff; box-shadow: 0 0 14px #fff8; }
+.znode.boss { width: 58px; height: 58px; background: radial-gradient(#c23a36, #3a0a0a); border-color: #ff8a7a; box-shadow: 0 0 20px #ff3b2b; }
+.znode:disabled { opacity: 0.45; cursor: default; }
+.znode .stars { position: absolute; bottom: -12px; font-size: 9px; color: var(--gold); letter-spacing: 1px; }
+
+/* Hero */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat { background: #0b090d; border: 1px solid #2a2228; padding: 8px; }
+.stat span { font-size: 11px; color: var(--muted); display: block; }
+.stat b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.slot { aspect-ratio: 1; border: 1px dashed #4a3c30; display: grid; place-items: center; font-size: 10px; color: var(--muted); text-align: center; background: #0b090d; }
+.soonbox { text-align: center; padding: 24px 12px; }
+.soonbox svg { width: 64px; height: 64px; opacity: 0.8; }
+.soonbox h3 { font-family: var(--display); font-size: 24px; margin: 10px 0 6px; color: var(--beige); }
+
+/* Battle HUD */
+.hud { position: absolute; inset: 0; z-index: 4; pointer-events: none; padding-block: 8px 10px; padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; }
+.hud > * { pointer-events: auto; }
+.hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.waves { background: #000b; border: 1px solid #3a2f2a; padding: 5px 8px; min-width: 0; }
+.waves .l { font-size: 9.5px; letter-spacing: 0.12em; color: var(--bronze-hi); font-weight: 800; text-transform: uppercase; }
+.waves .pips { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+.waves .pip { width: 12px; height: 12px; transform: rotate(45deg) scale(0.75); background: #2a2228; border: 1px solid #5a4632; }
+.waves .pip.on { background: var(--blood); border-color: #ff8a7a; }
+.waves .pip.boss { background: #3a0a0a; border-color: #ff3b2b; }
+.herohp { margin-top: 6px; position: relative; width: 150px; height: 14px; background: #000c; border: 1px solid #4a3a2c; }
 .herohp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7d1f22, var(--blood)); }
-.herohp span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
-.progress { margin-top: 6px; height: 3px; background: #000a; }
-.progress i { display: block; height: 100%; background: var(--bronze); }
-.focus-hint { margin-top: 6px; text-align: center; font-size: 12px; color: var(--muted); text-shadow: 0 1px 3px #000; }
+.herohp span { position: relative; display: block; text-align: center; font-size: 10px; line-height: 13px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
+.tright { display: grid; justify-items: end; gap: 6px; }
+.time { background: linear-gradient(#5a1414, #2a0808); border: 1px solid #a04040; padding: 4px 10px; text-align: right; }
+.time .l { font-size: 9px; letter-spacing: 0.1em; color: #f0b0a0; font-weight: 800; text-transform: uppercase; }
+.time b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.time.low b { color: #ffd04a; }
+.menu-btn { width: 38px; height: 38px; border-radius: 4px; background: #000b; border: 1px solid #5a4632; display: grid; place-items: center; }
+.menu-btn svg { width: 20px; height: 20px; }
+.stage-name { text-align: center; font-family: var(--display); font-size: 16px; color: var(--beige); text-shadow: 0 1px 3px #000; margin-top: 4px; }
 .hud-bottom { margin-top: auto; display: grid; gap: 6px; }
-.manabar { position: relative; height: 16px; background: #000c; border: 1px solid #3c2f55; }
-.manabar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #4a2a9a, var(--mana), #c6a8ff); }
-.manabar span { position: relative; display: block; font-size: 11px; line-height: 16px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
+.manabar { position: relative; height: 22px; display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; }
+.manabar .crystal { width: 26px; height: 26px; z-index: 2; filter: drop-shadow(0 0 6px #8b54ee); }
+.manabar .bar { position: relative; height: 16px; margin-left: -6px; background: #000c; border: 1px solid #4a3270; }
+.manabar .bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #4a2690, var(--mana), #c6a8ff); }
+.manabar .bar span { position: relative; display: block; font-size: 11px; line-height: 15px; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
 .deck { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
-.dc { position: relative; height: 84px; border-radius: 5px; border: 1px solid #4a3d55; background: #15111a; padding: 0; overflow: hidden; touch-action: manipulation; }
+.dc { position: relative; aspect-ratio: 3 / 4; border: 2px solid var(--r0); border-radius: 4px; background: #110d13; overflow: hidden; touch-action: manipulation; }
+.dc.r1 { border-color: var(--r1); } .dc.r2 { border-color: var(--r2); } .dc.r3 { border-color: var(--r3); }
 .dc canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.dc .cost { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 11px; background: radial-gradient(#b48cff, #4b2a8f); border: 1px solid #d9c6ff; z-index: 2; }
-.dc .nm { position: absolute; left: 2px; right: 2px; bottom: 3px; font-size: 9.5px; font-weight: 800; line-height: 1.05; text-align: center; text-shadow: 0 1px 2px #000, 0 0 4px #000; z-index: 2; }
-.dc .cd { position: absolute; inset: 0; background: #000b; transform-origin: bottom; z-index: 1; }
-.dc.poor { filter: grayscale(0.85) brightness(0.6); }
-.dc.ready { border-color: #b48cff; }
-.dc:active { transform: scale(0.96); }
+.dc .cd { position: absolute; inset: 0; background: #000c; transform-origin: bottom; z-index: 1; }
+.dc.poor canvas { filter: grayscale(0.9) brightness(0.55); }
+.dc.ready { box-shadow: 0 0 10px #b48cff99; }
+.dc:active { transform: scale(0.95); }
 
-.result { margin: auto 0; text-align: center; background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 22px 16px; }
-.result h2 { font-family: var(--display); font-size: 40px; margin: 0; color: #e7d3b0; }
+.result { position: absolute; z-index: 6; left: 16px; right: 16px; top: 22%; text-align: center; background: linear-gradient(#17121a, #0e0b10); border: 1px solid var(--bronze); padding: 22px 16px; box-shadow: 0 10px 40px #000; }
+.result h2 { font-family: var(--display); font-size: 44px; margin: 0; color: var(--beige); letter-spacing: 0.04em; }
 .result.lose h2 { color: var(--blood); }
 .result p { color: var(--muted); line-height: 1.5; }
-.toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); background: #0c0a10ee; border: 1px solid var(--edge); padding: 9px 14px; border-radius: 4px; z-index: 9; font-size: 14px; text-align: center; max-width: 80%; pointer-events: none; }
-.banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-family: var(--display); font-size: 34px; color: #e7d3b0; text-shadow: 0 0 18px #c8413f, 0 2px 0 #000; pointer-events: none; animation: banner 1.8s ease-out forwards; }
+.result .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); background: #0b090dee; border: 1px solid var(--bronze); padding: 9px 14px; border-radius: 3px; z-index: 9; font-size: 14px; text-align: center; max-width: 80%; pointer-events: none; }
+.banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-family: var(--display); font-size: 34px; color: #e7d3b0; text-shadow: 0 0 18px #c23a36, 0 2px 0 #000; pointer-events: none; animation: banner 1.8s ease-out forwards; }
 @keyframes banner { 0% { opacity: 0; transform: scale(1.3); } 15% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-.pull-res { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 12px; }
 .note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.45; }
+@media (max-width: 380px) { .tab .disc { width: 40px; height: 40px; } .tab { font-size: 9.5px; } }
 </style>
 </head>
 <body>
@@ -196,7 +300,7 @@ function stageDef(n) {
     groups: 3 + Math.ceil(n * 0.7),
     level: n,
     pool,
-    gold: 80 + n * 25, xp: 40 + n * 12, crystals: 80,
+    gold: 80 + n * 25, xp: 40 + n * 12, crystals: 80, timeLimit: 150 + n * 15,
   };
 }
 
@@ -210,7 +314,8 @@ class Run {
     this.units = [];
     this.objects = [];
     this.nextId = 1;
-    this.mana = 6; this.maxMana = 30; this.regen = 0.55;
+    this.mana = 6; this.maxMana = 25; this.regen = 0.55;
+    this.timeLimit = stage.timeLimit; this.ambushes = 0;
     this.loot = { gold: 0, copies: {} };
     this.cards = deck.map(id => ({ def: CARD[id], level: (profile.cards[id] || { level: 1 }).level, cd: 0 }));
     const hs = Prog.heroScale(profile.heroLevel);
@@ -247,6 +352,7 @@ class Run {
     if (S.n >= 3) this.objects.push({ id: this.nextId++, kind: "cage", x: (r() - 0.5) * 8, z: -L * 0.45, done: false });
     this.objects.forEach(o => this.events.push({ k: "obj", o }));
   }
+  get groupCount() { return this.stage.groups + (this.stage.boss ? 1 : 0); }
   get allies() { return this.units.filter(u => u.team === "P" && u.hp > 0); }
   get foes() { return this.units.filter(u => u.team === "E" && u.hp > 0); }
   dist(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
@@ -316,6 +422,7 @@ class Run {
     // Wake ambush groups as the hero approaches.
     for (const e of this.units) if (e.team === "E" && !e.awake && e.hp > 0 && this.dist(e, h) < (e.boss ? 13 : 10)) {
       this.units.filter(o => o.group === e.group && o.team === "E").forEach(o => o.awake = true);
+      this.ambushes++;
       this.events.push({ k: "ambush", boss: e.boss });
     }
     // Objects the hero walks into.
@@ -371,7 +478,7 @@ class Run {
     this.separate();
     for (const u of this.units) { u.x = Math.max(-7, Math.min(7, u.x)); u.z = Math.max(this.endZ - 1.5, Math.min(3, u.z)); }
 
-    if (h.hp <= 0) { this.state = "lose"; return; }
+    if (h.hp <= 0 || this.t >= this.timeLimit) { this.state = "lose"; this.timedOut = h.hp > 0; return; }
     const bossAlive = this.bossUnit && this.bossUnit.hp > 0;
     if (h.z <= this.endZ + 1.5 && !bossAlive) this.state = "win";
     if (this.stage.boss && !bossAlive && this.bossUnit) this.state = "win";
@@ -735,152 +842,356 @@ function showTitleScene() {
   scene.remove(level); level = new THREE.Group(); scene.add(level);
   const fake = { stage: { n: 1 }, endZ: -20 }; buildLevel(fake);
   titleGroup = new THREE.Group();
-  const hero = buildModel({ hero: true }); titleGroup.add(hero);
-  [["golem", -1.6, -1.4], ["bonearch", 1.5, 0.8], ["ghoul", 1.2, -1.6], ["witch", -1.3, 1.0]].forEach(([type, x, z]) => { const m = buildModel({ type }); m.position.set(x, 0, z); titleGroup.add(m); });
+  const hero = buildModel({ hero: true }); hero.scale.setScalar(1.9); hero.children[hero.children.length - 1].visible = false; titleGroup.add(hero);
+  [["golem", -2.4, 2.2], ["bonearch", 2.3, 2.6], ["ghoul", 1.6, 1.4], ["witch", -1.5, 3.2]].forEach(([type, x, z]) => { const m = buildModel({ type }); m.position.set(x, 0, z); titleGroup.add(m); });
   titleGroup.rotation.y = Math.PI; titleGroup.position.z = -7.5; level.add(titleGroup);
   heroLight.position.set(0, 3, 0);
 }
 
-// ---------- Card art (procedural, original) ----------
+// ---------- Icons (original line art) ----------
+const I = {
+  hood: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2 4 10v9l4 3h8l4-3v-9z"/><path d="M8 13c1.5 2 6.5 2 8 0"/><circle cx="9.5" cy="11" r=".8" fill="currentColor"/><circle cx="14.5" cy="11" r=".8" fill="currentColor"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-7v16"/><path d="M20 4v14h-7"/><path d="M7 9h3M7 12h3"/></svg>',
+  compass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z" fill="currentColor" fill-opacity=".35"/></svg>',
+  claw: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 20c0-6 2-11 5-15"/><path d="M11 20c0-5 2-9 5-12"/><path d="M16 20c0-4 1.5-7 4-9"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  banner: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 21V3"/><path d="M6 4h12l-3 4 3 4H6"/></svg>',
+  tent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 20 12 4l9 16z"/><path d="M12 4v16M9 20l3-6 3 6"/></svg>',
+  scroll: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h11v13a3 3 0 0 1-3 3H6a2 2 0 0 1-2-2v-1h11"/><path d="M7 4a2 2 0 0 0-2 2v11"/><path d="M9 9h6M9 12h6"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="m3 7 9 6 9-6"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+  mask: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9c0-4 4-6 8-6s8 2 8 6c0 6-4 12-8 12S4 15 4 9z"/><path d="M7 10c1-1 3-1 4 0M13 10c1-1 3-1 4 0M10 16h4"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg>',
+  story: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 6c-2-2-6-2-8-1v14c2-1 6-1 8 1 2-2 6-2 8-1V5c-2-1-6-1-8 1z"/><path d="M12 6v14"/></svg>',
+  gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11"/><path d="M3 9h18M12 9v11M12 9c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1"/></svg>',
+  gem: '<svg viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z" fill="#e0344a"/><path d="M2 9h20M8 3l4 18 4-18" stroke="#ffb0b8" stroke-width="1" fill="none" opacity=".7"/></svg>',
+  coin: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#f0c057"/><circle cx="12" cy="12" r="6" fill="none" stroke="#8a6420" stroke-width="1.5"/><path d="M12 8v8" stroke="#8a6420" stroke-width="1.6"/></svg>',
+  crystal: '<svg viewBox="0 0 24 24"><path d="M12 1 19 9 12 23 5 9z" fill="#8b54ee"/><path d="M12 1v22M5 9h14" stroke="#e0d0ff" stroke-width="1" opacity=".7"/></svg>',
+};
+
+// ---------- Card art and portraits (procedural, original) ----------
 const artCache = new Map();
-function cardArt(id, w = 120, h = 90) {
+function cardArt(id, w = 120, h = 160) {
   const key = id + w; if (artCache.has(key)) return artCache.get(key);
   const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d");
   const card = CARD[id], T = card.unit ? UNIT_TYPES[card.unit] : null;
   const base = T ? T.color : { slow: "#3a6a8a", heal: "#3a7a5a", fire: "#8a3a1a", mana: "#5a3a9a" }[card.spell];
-  const grd = g.createRadialGradient(w / 2, h * 0.45, 4, w / 2, h / 2, w * 0.7); grd.addColorStop(0, base); grd.addColorStop(1, "#0a080c");
+  const grd = g.createRadialGradient(w / 2, h * 0.42, 4, w / 2, h / 2, w * 0.85); grd.addColorStop(0, base); grd.addColorStop(1, "#08060a");
   g.fillStyle = grd; g.fillRect(0, 0, w, h);
-  g.fillStyle = "rgba(0,0,0,0.55)";
+  const r = rng(id.length * 977 + id.charCodeAt(0));
+  g.fillStyle = "rgba(255,255,255,0.04)"; for (let i = 0; i < 40; i++) g.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2);
+  g.fillStyle = "rgba(0,0,0,0.62)";
   if (T) {
-    // silhouette
     g.beginPath();
-    if (T.role === "tank" || card.unit === "abom") g.ellipse(w / 2, h * 0.62, w * 0.26, h * 0.36, 0, 0, Math.PI * 2);
-    else if (T.flying) { g.moveTo(w * 0.15, h * 0.4); g.quadraticCurveTo(w / 2, h * 0.1, w * 0.85, h * 0.4); g.quadraticCurveTo(w / 2, h * 0.75, w * 0.15, h * 0.4); }
-    else { g.moveTo(w / 2, h * 0.18); g.lineTo(w * 0.72, h); g.lineTo(w * 0.28, h); g.closePath(); }
+    if (T.role === "tank" || card.unit === "abom") { g.ellipse(w / 2, h * 0.66, w * 0.34, h * 0.34, 0, 0, Math.PI * 2); g.ellipse(w / 2, h * 0.34, w * 0.16, h * 0.12, 0, 0, Math.PI * 2); }
+    else if (T.flying) { g.moveTo(w * 0.05, h * 0.38); g.quadraticCurveTo(w / 2, h * 0.08, w * 0.95, h * 0.38); g.quadraticCurveTo(w / 2, h * 0.62, w * 0.05, h * 0.38); }
+    else { g.ellipse(w / 2, h * 0.3, w * 0.13, h * 0.1, 0, 0, Math.PI * 2); g.moveTo(w / 2, h * 0.36); g.lineTo(w * 0.8, h); g.lineTo(w * 0.2, h); g.closePath(); }
     g.fill();
-    g.fillStyle = T.eye; g.shadowColor = T.eye; g.shadowBlur = 8;
-    const ey = T.role === "tank" || card.unit === "abom" ? h * 0.42 : T.flying ? h * 0.38 : h * 0.36;
-    g.beginPath(); g.arc(w / 2 - 6, ey, 2.4, 0, 7); g.arc(w / 2 + 6, ey, 2.4, 0, 7); g.fill();
-    if (card.count > 1) { g.shadowBlur = 0; g.fillStyle = "#e7d3b0"; g.font = "800 13px Figtree, sans-serif"; g.textAlign = "right"; g.fillText("x" + card.count, w - 5, h * 0.3); }
+    g.fillStyle = T.eye; g.shadowColor = T.eye; g.shadowBlur = 10;
+    const ey = T.role === "tank" || card.unit === "abom" ? h * 0.34 : T.flying ? h * 0.36 : h * 0.3;
+    g.beginPath(); g.arc(w / 2 - 7, ey, 2.6, 0, 7); g.arc(w / 2 + 7, ey, 2.6, 0, 7); g.fill();
+    g.shadowBlur = 0;
+    if (card.count > 1) { g.fillStyle = "#e3cfa8"; g.font = "900 15px Figtree, sans-serif"; g.textAlign = "right"; g.fillText("x" + card.count, w - 6, 20); }
   } else {
-    g.strokeStyle = { slow: "#bfe6ff", heal: "#9cff9c", fire: "#ffb060", mana: "#d6c0ff" }[card.spell]; g.lineWidth = 2; g.shadowColor = g.strokeStyle; g.shadowBlur = 10;
-    for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(w / 2, h * 0.55, 8 + i * 9, 0, Math.PI * 2); g.stroke(); }
+    g.strokeStyle = { slow: "#bfe6ff", heal: "#9cff9c", fire: "#ffb060", mana: "#d6c0ff" }[card.spell]; g.lineWidth = 2; g.shadowColor = g.strokeStyle; g.shadowBlur = 12;
+    for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(w / 2, h * 0.45, 10 + i * 11, 0, Math.PI * 2); g.stroke(); }
+    g.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; g.moveTo(w / 2, h * 0.45); g.lineTo(w / 2 + Math.cos(a) * 40, h * 0.45 + Math.sin(a) * 40); } g.stroke();
   }
   artCache.set(key, c); return c;
 }
+function paintInto(el, src) {
+  const cv = document.createElement("canvas"); cv.width = src.width; cv.height = src.height; cv.getContext("2d").drawImage(src, 0, 0); el.prepend(cv);
+}
+// NPC portrait: a hooded or bare-headed silhouette lit from one side, tinted per merchant.
+function portrait(npc, w = 320, h = 260) {
+  const key = "npc" + npc.id + w; if (artCache.has(key)) return artCache.get(key);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d");
+  const bg = g.createLinearGradient(0, 0, w, h); bg.addColorStop(0, npc.bg); bg.addColorStop(1, "#08060a"); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const glowG = g.createRadialGradient(w * 0.3, h * 0.3, 5, w * 0.3, h * 0.3, w * 0.6); glowG.addColorStop(0, npc.light + "66"); glowG.addColorStop(1, "#0000"); g.fillStyle = glowG; g.fillRect(0, 0, w, h);
+  g.fillStyle = "#0a070c";
+  g.beginPath(); g.ellipse(w / 2, h * 1.05, w * 0.36, h * 0.45, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(w / 2, h * 0.42, w * 0.13, h * 0.17, 0, 0, Math.PI * 2); g.fill();
+  if (npc.hood) { g.beginPath(); g.moveTo(w * 0.33, h * 0.55); g.quadraticCurveTo(w / 2, h * 0.05, w * 0.67, h * 0.55); g.closePath(); g.fill(); }
+  if (npc.beard) { g.beginPath(); g.moveTo(w * 0.42, h * 0.48); g.lineTo(w / 2, h * 0.7); g.lineTo(w * 0.58, h * 0.48); g.fill(); }
+  if (npc.bird) { g.beginPath(); g.ellipse(w * 0.74, h * 0.6, 20, 13, -0.4, 0, Math.PI * 2); g.moveTo(w * 0.7, h * 0.58); g.lineTo(w * 0.86, h * 0.48); g.lineTo(w * 0.8, h * 0.62); g.fill(); }
+  g.strokeStyle = npc.light; g.lineWidth = 2; g.globalAlpha = 0.7;
+  g.beginPath(); g.ellipse(w / 2, h * 0.42, w * 0.13, h * 0.17, 0, Math.PI * 0.75, Math.PI * 1.35); g.stroke(); g.globalAlpha = 1;
+  g.fillStyle = npc.light; g.shadowColor = npc.light; g.shadowBlur = 8;
+  g.beginPath(); g.arc(w / 2 - 12, h * 0.42, 2.5, 0, 7); g.arc(w / 2 + 12, h * 0.42, 2.5, 0, 7); g.fill();
+  artCache.set(key, c); return c;
+}
+
+// ---------- Village data ----------
+const NPCS = [
+  { id: "ilsa", name: "Ilsa, a mercadora de cartas", shop: "Cartas", desc: "Cartas do dia e livros de invocação", bg: "#3a1e3e", light: "#d6a8ff", hood: true,
+    lines: ["Cartas frescas da cripta. Algumas ainda mexem.", "Voltaste! Guardei-te as melhores, como sempre.", "Para ti, preço de amiga. Quase."] },
+  { id: "brenna", name: "Brenna, a alquimista", shop: "Alquimia", desc: "Poções para a heroína", bg: "#1e3a2a", light: "#9cffb0",
+    lines: ["As poções ainda estão a ferver. Volta mais tarde.", "Quanto mais confias em mim, mais frascos te mostro."] },
+  { id: "gorm", name: "Gorm, o ferreiro", shop: "Oficina", desc: "Fabricar e modificar equipamento", bg: "#3a2414", light: "#ffb070", beard: true,
+    lines: ["A forja está fria. Traz-me ferro de ossos e falamos.", "Um arco bom não se apressa."] },
+  { id: "kael", name: "Kael e o falcão Brasa", shop: "Gemas", desc: "Pacotes de gemas e ouro", bg: "#2a2a3a", light: "#ffd27a", bird: true,
+    lines: ["Neste protótipo não há compras com dinheiro real.", "O Brasa diz que as gemas brilham mais na cripta."] },
+];
+const NPC = Object.fromEntries(NPCS.map(n => [n.id, n]));
+const today = () => new Date().toISOString().slice(0, 10);
+function dailyOffers() {
+  const r = rng([...today()].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+  const pool = CARDS.filter(c => c.rarity < 3);
+  const out = [];
+  while (out.length < 4) { const c = pool[Math.floor(r() * pool.length)]; if (!out.find(o => o.id === c.id)) out.push({ id: c.id, qty: 1 + Math.floor(r() * 3) + (c.rarity === 0 ? 2 : 0), price: (c.rarity + 1) * (c.rarity + 1) * 90 }); }
+  return out;
+}
+
+// ---------- Profile migration ----------
+P.affinity = P.affinity || { ilsa: 0, brenna: 0, gorm: 0, kael: 0 };
+P.bought = P.bought && P.bought.day === today() ? P.bought : { day: today(), ids: [] };
+P.stars = P.stars || {};
 
 // ---------- Screens ----------
 const $ = id => document.getElementById(id);
 const ui = $("ui");
-let screen = "home", paused = false, selStage = 1, pendingDeck = null, lastResult = null, lastPull = null;
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2000); }
 const fmt = n => n.toLocaleString("pt-PT");
-function topbar(back) {
-  return `<div class="topbar">${back ? `<button class="btn" data-go="home" style="padding:6px 12px">Voltar</button>` : ""}<span class="title-sm"></span>
-    <span class="chip"><span class="gem" style="background:#f2c35b"></span>${fmt(P.gold)}</span>
-    <span class="chip"><span class="gem" style="background:#b48cff"></span>${fmt(P.crystals)}</span>
-    <span class="chip">Nv ${P.heroLevel}</span></div>`;
+let pendingUse = null, tab = null, view = "lobby", paused = false, selStage = 1, pendingDeck = null, lastResult = null, lastPull = null, cardSel = null, npcId = null, npcLine = 0, deckSlot = null;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2000); }
+const TABS = [
+  { id: "hero", name: "Heroína", icon: "hood" },
+  { id: "cards", name: "Cartas", icon: "book" },
+  { id: "map", name: "Mapa", icon: "compass" },
+  { id: "challenge", name: "Desafio", icon: "claw", soon: true },
+  { id: "arena", name: "Arena", icon: "shield", soon: true },
+  { id: "clan", name: "Clã", icon: "banner", soon: true },
+];
+function resBar() {
+  return `<div class="res">
+    <span class="cur">${I.gem}${fmt(P.crystals)}<button class="plus" data-open="npc:kael" aria-label="Comprar gemas">+</button></span>
+    <span class="cur">${I.coin}${fmt(P.gold)}<button class="plus" data-open="npc:kael" aria-label="Comprar ouro">+</button></span>
+    <span class="spacer"></span>
+    <button class="ico" data-soon="Perfil" aria-label="Perfil">${I.mask}</button>
+    <button class="ico" data-soon="Missões" aria-label="Missões" style="color:#7ad08a">${I.scroll}<span class="dot">3</span></button>
+    <button class="ico" data-soon="Correio" aria-label="Correio">${I.mail}</button>
+    <button class="ico" data-open="options" aria-label="Opções">${I.gear}</button>
+  </div>`;
 }
-function cardHtml(id, opts = {}) {
+function tabBar() {
+  return `<nav class="tabs">${TABS.map(t => `<button class="tab${tab === t.id ? " on" : ""}" data-tab="${t.id}"><span class="disc">${I[t.icon]}</span>${t.name}${t.soon ? `<span class="soon">em breve</span>` : ""}</button>`).join("")}</nav>`;
+}
+function win(title, body, foot, opts = {}) {
+  return `<section class="win${opts.full ? " full" : ""}"><header class="win-h">${opts.back ? `<button class="btn sm bk" data-open="${opts.back}">Voltar</button>` : ""}<h2>${title}</h2><button class="x" data-close aria-label="Fechar">✕</button></header>
+    <div class="win-b">${body}</div>${foot ? `<div class="win-f">${foot}</div>` : ""}</section>`;
+}
+function cardTile(id, o = {}) {
   const c = CARD[id], own = P.cards[id];
-  return `<button class="cardv r${c.rarity + 1}${opts.sel ? " sel" : ""}" ${opts.attr || ""}>
-    <div class="art" data-art="${id}"><span class="cost">${c.cost}</span>${own ? `<span class="lv">Nv ${own.level}</span>` : ""}</div>
-    <div class="nm">${c.name}<small>${opts.sub || c.text}</small></div></button>`;
-}
-function mountArt(root) {
-  root.querySelectorAll("[data-art]").forEach(el => { const cv = cardArt(el.dataset.art).cloneNode(); cv.getContext("2d").drawImage(cardArt(el.dataset.art), 0, 0); el.prepend(cv); });
+  const canUp = own && own.level < Prog.maxCardLevel && own.copies >= Prog.copiesToLevel(own.level);
+  return `<button class="cv r${c.rarity}${o.sel ? " sel" : ""}${o.ghost ? " ghost" : ""}" ${o.attr || ""} data-art="${id}" aria-label="${c.name}">
+    <span class="hex">${c.cost}</span>${canUp && !o.noArrow ? `<span class="uparrow"></span>` : ""}
+    <span class="lvband">${o.label ?? (own ? "Nível " + own.level : "")}${o.name ? `<b>${c.name}</b>` : ""}</span></button>`;
 }
 
 function render() {
-  const html = { home: homeView, map: mapView, deck: deckView, battle: battleView, result: resultView, cards: cardsView, altar: altarView }[screen]();
+  let html = "";
+  if (view === "battle") html = battleView();
+  else {
+    html = resBar();
+    if (view === "lobby") html += lobbyView();
+    else html += ({ hero: heroView, cards: cardsView, map: mapView, zone: zoneView, deck: deckView, village: villageView, npc: npcView, shop: shopView, options: optionsView, soon: soonView, result: resultView }[view] || lobbyView)();
+    if (view !== "deck" && view !== "result") html += tabBar();
+  }
   ui.innerHTML = html;
-  mountArt(ui);
+  ui.querySelectorAll("[data-art]").forEach(el => paintInto(el, cardArt(el.dataset.art)));
+  ui.querySelectorAll("[data-portrait]").forEach(el => paintInto(el, portrait(NPC[el.dataset.portrait])));
+  ui.querySelectorAll("[data-paint]").forEach(el => PAINTERS[el.dataset.paint](el));
   bind();
 }
-function go(s) {
-  screen = s;
-  if (s !== "battle" && s !== "result" && !titleGroup) showTitleScene();
+function open(v) {
+  if (v.startsWith("npc:")) { npcId = v.slice(4); npcLine = Math.min(NPC[npcId].lines.length - 1, Math.floor(P.affinity[npcId] / 2)); v = "npc"; }
+  view = v;
+  if (v !== "battle" && !titleGroup) showTitleScene();
   render();
 }
 
-function homeView() {
-  return `<div class="layer pass">${topbar(false)}
-    <div class="home">
-      <h1>Pacto dos<br>Invocadores</h1>
-      <p class="tag">Guia a arqueira Sera pela cripta e invoca os mortos a teu favor.</p>
-      <button class="btn gold" data-go="map">Campanha · fase ${Math.min(10, P.best + 1)}</button>
-      <div class="row"><button class="btn" data-go="cards">Cartas</button><button class="btn" data-go="altar">Altar</button></div>
-    </div></div>`;
+function lobbyView() {
+  const need = Prog.heroXpToNext(P.heroLevel);
+  return `<div class="lobby-left">
+      <button class="sq" data-soon="Missões" aria-label="Missões" style="color:#7ad08a">${I.scroll}<span class="dot">3</span><span class="lbl">Missões</span></button>
+      <button class="sq" data-open="village" aria-label="Vila" style="color:#e3cfa8">${I.tent}<span class="lbl">Vila</span></button>
+      <button class="sq" data-soon="Livro de histórias" aria-label="Histórias">${I.story}<span class="lbl">Histórias</span></button>
+      <button class="sq" data-soon="Eventos" aria-label="Eventos" style="color:#f0c057">${I.gift}<span class="lbl">Evento</span></button>
+    </div>
+    <div class="lobby-title">Pacto dos<br>Invocadores</div>
+    <div class="pcard"><div class="t">Errante do Véu</div><div class="n">Sera</div>
+      <div style="font-size:12px;color:var(--muted)">Nível ${P.heroLevel} · ${P.heroXp}/${need} XP</div>
+      <div class="xp"><i style="width:${100 * P.heroXp / need}%"></i></div>
+      <div class="btns"><button class="btn sm" data-tab="hero">Equipar</button><button class="btn sm" data-tab="cards">Cartas</button></div></div>
+    <button class="play" data-tab="map">Jogar<small>Fase ${Math.min(10, P.best + 1)}</small></button>`;
+}
+function heroView() {
+  const hs = Prog.heroScale(P.heroLevel);
+  const slots = ["Arco", "Capuz", "Botas", "Colar", "Anel"];
+  return win("Heroína", `<p class="sub">Sera, arqueira errante. Dispara sozinha contra o inimigo mais próximo ou o que tocares.</p>
+    <div class="stats">
+      <div class="stat"><span>Nível</span><b>${P.heroLevel}</b></div>
+      <div class="stat"><span>Vida</span><b>${Math.round(320 * hs)}</b></div>
+      <div class="stat"><span>Dano por flecha</span><b>${Math.round(18 * hs)}</b></div>
+      <div class="stat"><span>Alcance</span><b>6,5 m</b></div></div>
+    <div class="h3"><span>Equipamento</span><span>em breve</span></div>
+    <div class="slots">${slots.map(s => `<div class="slot">${s}</div>`).join("")}</div>
+    <div class="h3"><span>Guarda-roupa</span><span>em breve</span></div>
+    <p class="note">Cada nível dá +10% de vida e dano. Ganhas XP em cada fase, e um pouco mesmo quando perdes.</p>`);
+}
+function cardsView() {
+  const deck = P.deck.filter(id => P.cards[id]);
+  const avg = deck.length ? (deck.reduce((a, id) => a + CARD[id].cost, 0) / deck.length).toFixed(1).replace(".", ",") : "0";
+  const ids = Object.keys(P.cards).sort((a, b) => CARD[b].rarity - CARD[a].rarity || CARD[a].cost - CARD[b].cost);
+  let detail = "";
+  if (cardSel && P.cards[cardSel]) {
+    const c = CARD[cardSel], o = P.cards[cardSel], T = c.unit ? UNIT_TYPES[c.unit] : null, s = Prog.cardScale(o.level);
+    const need = Prog.copiesToLevel(o.level), gold = Prog.goldToLevel(o.level), max = o.level >= Prog.maxCardLevel;
+    const inDeck = P.deck.includes(cardSel);
+    detail = `<div class="detail">${cardTile(cardSel, { noArrow: true })}<div>
+      <div style="font-weight:900">${c.name} <span style="color:var(--r${c.rarity});font-size:11px">${RARITY[c.rarity]}</span></div>
+      <div class="st">${T ? `<span>Tipo</span><b>Invocação${T.flying ? ", voadora" : ""}</b><span>Unidades</span><b>${c.count}</b><span>Vida</span><b>${Math.round(T.hp * s)}</b><span>Dano</span><b>${Math.round(T.atk * s)}</b><span>Alcance</span><b>${T.range} m</b>` : `<span>Tipo</span><b>Feitiço</b><span>Efeito</span><b>${c.text}</b>`}<span>Recarga</span><b>${c.cd} s</b><span>Mana</span><b>${c.cost}</b></div>
+      ${max ? `<div class="note">Nível máximo.</div>` : `<div class="copies"><i style="width:${Math.min(100, 100 * o.copies / need)}%"></i><span>${o.copies}/${need}</span></div>`}</div>
+      <div class="acts"><button class="btn" data-use="${cardSel}" ${inDeck ? "disabled" : ""}>${inDeck ? "No baralho" : "Usar"}</button>
+      <button class="btn go" data-up="${cardSel}" ${max ? "disabled" : ""}>Subir nível · ${fmt(gold)} ${I.coin.replace("<svg", '<svg width="14" height="14" style="vertical-align:-2px"')}</button></div></div>`;
+  }
+  return win("Cartas", `<div class="h3"><span>Baralho em uso</span><span>Mana média ${avg}</span></div>
+    <div class="grid six">${Array.from({ length: 6 }, (_, i) => deck[i] ? cardTile(deck[i], { attr: `data-slot="${i}"`, sel: deckSlot === i }) : `<button class="cv empty" data-slot="${i}" aria-label="Espaço vazio"></button>`).join("")}</div>
+    <p class="note">${pendingUse ? `Toca na carta do baralho que dá lugar a ${CARD[pendingUse].name}.` : deckSlot !== null ? "Escolhe na coleção a carta que entra neste lugar." : "Toca numa carta do baralho para a trocar, ou numa carta da coleção para ver detalhes."}</p>
+    <div class="h3"><span>Coleção</span><span>${ids.length}/${CARDS.length}</span></div>
+    <div class="grid">${ids.map(id => cardTile(id, { attr: `data-card-sel="${id}"`, sel: cardSel === id, name: true })).join("")}${CARDS.filter(c => !P.cards[c.id]).map(c => `<div class="cv empty" title="Por descobrir"></div>`).join("")}</div>
+    ${detail}`);
 }
 function mapView() {
-  const nodes = Array.from({ length: 10 }, (_, i) => {
-    const n = i + 1, done = n <= P.best, open = n <= P.best + 1, S = stageDef(n);
-    return `<button class="node${done ? " done" : ""}${n === P.best + 1 ? " next" : ""}${S.boss || S.mini ? " boss" : ""}" data-stage="${n}" ${open ? "" : "disabled"} aria-label="${S.name}">${n}</button>`;
-  }).join("");
-  return `<div class="layer scrim">${topbar(true)}<div class="sheet"><h2>Cripta do Sino</h2>
-    <p class="sub">Mundo 1 · dez fases. A 5 tem um ogro e a 10 o Senhor do Sino Partido.</p>
-    <div class="map">${nodes}</div>
-    <p class="note">Arrasta o dedo no chão para mover a Sera; ela dispara sozinha. Toca num inimigo para o focar. As cartas em baixo invocam aliados ou lançam feitiços com mana. Parte jarros e abre baús pelo caminho.</p></div></div>`;
+  const regions = [
+    { name: "Cripta do Sino", x: 50, y: 74, open: true, prog: `${P.best}/10` },
+    { name: "Pântano Febril", x: 26, y: 52 }, { name: "Picos de Geada", x: 72, y: 40 },
+    { name: "Bosque Calado", x: 30, y: 25 }, { name: "Fornalha Cinzenta", x: 70, y: 14 },
+  ];
+  return win("Mapa do mundo", `<div class="diff"><span style="color:var(--muted)">◀</span> Dificuldade: Normal <span style="color:var(--muted)">▶</span></div>
+    <div class="parch" data-paint="parch">${regions.map(r => r.open
+      ? `<button class="region open" style="left:${r.x}%;top:${r.y}%" data-open="zone">${r.name}<small>${r.prog} · entrar</small></button>`
+      : `<div class="region locked" style="left:${r.x}%;top:${r.y}%">${r.name}<small>em breve</small></div>`).join("")}</div>`);
+}
+function zoneView() {
+  const pts = [[50, 92], [28, 82], [44, 71], [70, 63], [52, 53], [26, 45], [40, 34], [66, 27], [46, 18], [50, 7]];
+  return win("Cripta do Sino", `<p class="sub">Dez fases. A 5 guarda um ogro e a 10 o Senhor do Sino Partido.</p>
+    <div class="zone" data-paint="zone">${pts.map(([x, y], i) => {
+      const n = i + 1, S = stageDef(n), done = n <= P.best, openN = n <= P.best + 1, st = P.stars[n] || 0;
+      return `<button class="znode${done ? " done" : ""}${n === P.best + 1 ? " next" : ""}${S.boss ? " boss" : ""}" style="left:${x}%;top:${y}%" data-stage="${n}" ${openN ? "" : "disabled"} aria-label="${S.name}">${S.boss ? "☠" : n}${done ? `<span class="stars">${"◆".repeat(st)}${"◇".repeat(3 - st)}</span>` : ""}</button>`;
+    }).join("")}</div>`, "", { back: "map" });
 }
 function deckView() {
   const S = stageDef(selStage), owned = Object.keys(P.cards);
   const foes = [...new Set(S.pool.concat(S.mini ? ["ogre"] : [], S.boss ? ["boss"] : []))];
-  return `<div class="layer scrim">${topbar(true)}<div class="sheet">
-    <h2>${S.n}. ${S.name}</h2><p class="sub">Escolhe 6 cartas. Inimigos nesta fase:</p>
-    <div class="foes">${foes.map(f => `<span class="chip" style="border-color:${UNIT_TYPES[f].eye}55">${UNIT_TYPES[f].name}</span>`).join("")}</div>
-    <h3>Baralho ${pendingDeck.length}/6</h3>
-    <div class="deckgrid">${owned.sort((a, b) => CARD[a].cost - CARD[b].cost).map(id => cardHtml(id, { sel: pendingDeck.includes(id), attr: `data-pick="${id}"` })).join("")}</div></div>
-    <div class="bottombar"><button class="btn gold" data-start ${pendingDeck.length === 6 ? "" : "disabled"}>Entrar na cripta</button></div></div>`;
+  return win(`${S.n}. ${S.name}`, `<p class="sub">Tempo limite ${Math.floor(S.timeLimit / 60)}:${String(S.timeLimit % 60).padStart(2, "0")}. Inimigos nesta fase:</p>
+    <div class="foes">${foes.map(f => `<span class="chip" style="border-color:${UNIT_TYPES[f].eye}66">${UNIT_TYPES[f].name}</span>`).join("")}</div>
+    <div class="h3"><span>Baralho</span><span>${pendingDeck.length}/6</span></div>
+    <div class="grid">${owned.sort((a, b) => CARD[a].cost - CARD[b].cost).map(id => cardTile(id, { sel: pendingDeck.includes(id), attr: `data-pick="${id}"`, name: true, noArrow: true })).join("")}</div>`,
+    `<button class="btn" data-open="zone">Voltar</button><button class="btn red" data-start ${pendingDeck.length === 6 ? "" : "disabled"}>Entrar na cripta</button>`, { full: true });
+}
+function villageView() {
+  return win("Vila", `<div class="sign">Vila de Cinzaval</div>
+    <div class="shops">${NPCS.map(n => `<button class="shop" data-open="npc:${n.id}" data-portrait="${n.id}"><div class="lab"><b>${n.shop}</b><span>${n.desc}</span></div></button>`).join("")}</div>
+    <p class="note">Comprar e conversar com os mercadores sobe a afinidade, que abre mais ofertas.</p>`);
+}
+function hearts(id) { const a = Math.min(5, Math.floor(P.affinity[id] / 2)); return `<span class="hearts">${"♥".repeat(a)}<span class="off">${"♥".repeat(5 - a)}</span></span>`; }
+function npcView() {
+  const n = NPC[npcId];
+  const opts = {
+    ilsa: [["shop", "Negociar cartas", I.book], ["altar", "Livros de invocação", I.crystal], ["talk", "Conversar", I.mask]],
+    brenna: [["soon", "Ver poções", I.scroll], ["talk", "Conversar", I.mask]],
+    gorm: [["soon", "Fabricar", I.claw], ["soon", "Modificar", I.gear], ["talk", "Conversar", I.mask]],
+    kael: [["soon", "Pacotes de gemas", I.gem], ["talk", "Conversar", I.mask]],
+  }[n.id];
+  return win(n.shop, `<div class="npc"><div class="portrait" data-portrait="${n.id}"></div>
+    <div><div class="nm">${n.name}</div>${hearts(n.id)}</div>
+    <div class="speech">${n.lines[npcLine]}</div>
+    <div class="opts">${opts.map(([k, label, ic]) => `<button class="btn" data-npc="${k}"><span style="width:20px;display:inline-grid">${ic.replace("<svg", '<svg width="20" height="20"')}</span>${label}</button>`).join("")}</div></div>`, "", { back: "village" });
+}
+function shopView() {
+  const offers = dailyOffers();
+  const left = new Date(); left.setHours(24, 0, 0, 0); const mins = Math.round((left - Date.now()) / 60000);
+  return win("Loja de cartas", `<div class="h3"><span>Cartas de hoje</span><span class="timer">renova em ${Math.floor(mins / 60)}h ${mins % 60}m</span></div>
+    ${offers.map(o => { const sold = P.bought.ids.includes(o.id); return `<div class="offer">${cardTile(o.id, { label: "x" + o.qty, noArrow: true })}
+      <div class="t"><b>${CARD[o.id].name}</b><span>${RARITY[CARD[o.id].rarity]} · ${o.qty} cópias</span></div>
+      <button class="btn go sm" data-buy="${o.id}" ${sold || P.gold < o.price ? "disabled" : ""}>${sold ? "Vendido" : fmt(o.price) + " ouro"}</button></div>`; }).join("")}
+    <div class="h3"><span>Livros de invocação</span><span>lendária garantida em ${LEGEND_PITY - P.pity}</span></div>
+    <p class="sub">${RARITY.map((r, i) => `${r} ${Math.round(DRAW_RATES[i] * 100)}%`).join(" · ")}. O livro grátis do dia nunca dá lendárias.</p>
+    <div class="win-f" style="padding:0;border:0">
+      <button class="btn" data-draw="free" ${P.freeDay !== today() ? "" : "disabled"}>${P.freeDay !== today() ? "Grátis hoje" : "Grátis amanhã"}</button>
+      <button class="btn purple" data-draw="1" ${P.crystals >= DRAW_COST ? "" : "disabled"}>x1 · ${DRAW_COST}</button>
+      <button class="btn red" data-draw="10" ${P.crystals >= DRAW10_COST ? "" : "disabled"}>x10 · ${DRAW10_COST}</button></div>
+    ${lastPull ? `<div class="h3"><span>Resultado</span></div><div class="grid">${lastPull.map(r => cardTile(r.c.id, { label: r.isNew ? "Nova!" : "+1", name: true, noArrow: true })).join("")}</div>` : ""}`, "", { back: "npc:ilsa" });
+}
+function optionsView() {
+  return win("Opções", `<p class="sub">O progresso fica guardado só neste browser.</p>
+    <button class="btn red" data-reset>${resetArm ? "Toca outra vez para apagar tudo" : "Apagar progresso"}</button>`);
+}
+let resetArm = false, soonName = "";
+function soonView() {
+  const t = TABS.find(x => x.name === soonName);
+  const text = { Desafio: "Masmorras diárias de ouro, cartas e equipamento, com tentativas limitadas.", Arena: "Ataca a defesa de outros jogadores, controlada pela IA, e sobe de liga.", "Clã": "Junta-te a um clã, conversa e gira a roda de prémios do clã." }[soonName] || "Esta parte ainda não foi construída.";
+  return win(soonName, `<div class="soonbox">${t ? I[t.icon] : I.scroll}<h3>Em breve</h3><p class="sub">${text}</p></div>`);
 }
 function battleView() {
-  return `<div class="layer pass">
-    <div class="hud-top"><div class="herohp"><i id="hpFill"></i><span id="hpText"></span></div>
-      <button class="btn" id="spd" style="padding:4px 10px">${speedMul}x</button>
-      <button class="btn" id="pause" style="padding:4px 10px">${paused ? "Continuar" : "Pausa"}</button></div>
-    <div class="progress"><i id="prog"></i></div>
-    <div class="focus-hint" id="hint">${run.stage.n}. ${run.stage.name}</div>
-    ${paused ? `<div class="result" style="margin-top:20vh"><h2>Pausa</h2><p>A fase continua quando voltares.</p><button class="btn gold" id="resume">Continuar</button> <button class="btn" id="quit">Desistir</button></div>` : ""}
+  const S = run.stage, groups = run.groupCount;
+  return `<div class="hud">
+    <div class="hud-top">
+      <div><div class="waves"><div class="l">Emboscadas</div><div class="pips" id="pips">${Array.from({ length: groups }, (_, i) => `<span class="pip${S.boss && i === groups - 1 ? " boss" : ""}"></span>`).join("")}</div></div>
+        <div class="herohp"><i id="hpFill"></i><span id="hpText"></span></div></div>
+      <div class="tright"><div class="time" id="timeBox"><div class="l">Tempo restante</div><b id="time">0:00</b></div>
+        <button class="menu-btn" id="menu" aria-label="Menu">${I.menu}</button></div>
+    </div>
+    <div class="stage-name">${S.n}. ${S.name}</div>
     <div class="hud-bottom">
-      <div class="manabar"><i id="manaFill"></i><span id="manaText"></span></div>
-      <div class="deck">${run.cards.map((c, i) => `<button class="dc" data-card="${i}" id="dc${i}" aria-label="${c.def.name}"><span class="cost">${c.def.cost}</span><span class="cd" id="cd${i}"></span><span class="nm">${c.def.name}</span></button>`).join("")}</div>
-    </div></div>`;
+      <div class="manabar">${I.crystal.replace("<svg", '<svg class="crystal"')}<div class="bar"><i id="manaFill"></i><span id="manaText"></span></div></div>
+      <div class="deck">${run.cards.map((c, i) => `<button class="dc r${c.def.rarity}" data-card="${i}" id="dc${i}" data-art="${c.def.id}" aria-label="${c.def.name}"><span class="hex">${c.def.cost}</span><span class="cd" id="cd${i}"></span><span class="lvband">Nv ${c.level}<b>${c.def.name}</b></span></button>`).join("")}</div>
+    </div>
+    ${paused ? `<div class="result"><h2>Menu</h2><p>A fase está em pausa.</p><div class="btns"><button class="btn go" id="resume">Continuar</button><button class="btn" id="spd">Velocidade ${speedMul}x</button><button class="btn red" id="quit">Desistir</button></div></div>` : ""}
+  </div>`;
 }
 function resultView() {
   const r = lastResult, copies = Object.entries(r.copies).map(([id, n]) => `${n}× ${CARD[id].name}`).join(", ");
-  return `<div class="layer scrim"><div class="result${r.win ? "" : " lose"}"><h2>${r.win ? "Vitória" : "A Sera caiu"}</h2>
-    <p>+${fmt(r.gold)} ouro · +${r.xp} XP${r.crystals ? ` · +${r.crystals} cristais` : ""}${copies ? `<br>Cartas: ${copies}` : ""}${r.levelUp ? `<br><b>A Sera subiu para o nível ${P.heroLevel}!</b>` : ""}</p>
+  return `<div class="result${r.win ? "" : " lose"}"><h2>${r.win ? "Vitória" : r.timedOut ? "Tempo esgotado" : "A Sera caiu"}</h2>
+    ${r.win ? `<div style="color:var(--gold);font-size:22px;letter-spacing:4px">${"◆".repeat(r.stars)}${"◇".repeat(3 - r.stars)}</div>` : ""}
+    <p>+${fmt(r.gold)} ouro · +${r.xp} XP${r.crystals ? ` · +${r.crystals} gemas` : ""}${copies ? `<br>Cartas: ${copies}` : ""}${r.levelUp ? `<br><b>A Sera subiu para o nível ${P.heroLevel}!</b>` : ""}</p>
     ${r.win ? "" : `<p>Leva tanques para a frente, guarda mana para as emboscadas e foca os atiradores primeiro.</p>`}
-    <button class="btn gold" data-go="map">Continuar</button></div></div>`;
+    <div class="btns"><button class="btn" data-open="lobby">Lobby</button><button class="btn go" data-open="zone">Continuar</button></div></div>`;
 }
-function cardsView() {
-  const ids = Object.keys(P.cards).sort((a, b) => CARD[b].rarity - CARD[a].rarity || CARD[a].cost - CARD[b].cost);
-  return `<div class="layer scrim">${topbar(true)}<div class="sheet"><h2>Cartas</h2>
-    <p class="sub">Repetidas e ouro sobem o nível de uma carta (+12% de vida e dano por nível). Toca numa carta para a melhorar.</p>
-    <div class="deckgrid">${ids.map(id => { const o = P.cards[id], need = Prog.copiesToLevel(o.level), gold = Prog.goldToLevel(o.level), max = o.level >= Prog.maxCardLevel;
-      const can = !max && o.copies >= need && P.gold >= gold;
-      return cardHtml(id, { attr: `data-up="${id}"`, sel: can, sub: max ? "Nível máximo" : `${o.copies}/${need} cópias · ${fmt(gold)} ouro` }); }).join("")}</div>
-    <p class="note">${CARDS.length - ids.length} cartas ainda por descobrir no Altar.</p></div></div>`;
-}
-function altarView() {
-  const today = new Date().toISOString().slice(0, 10), freeOk = P.freeDay !== today;
-  return `<div class="layer scrim">${topbar(true)}<div class="sheet"><h2>Altar das Almas</h2>
-    <p class="sub">${RARITY.map((n, i) => `${n} ${Math.round(DRAW_RATES[i] * 100)}%`).join(" · ")}. Lendária garantida em até ${LEGEND_PITY} invocações (faltam ${LEGEND_PITY - P.pity}). A invocação grátis diária nunca dá lendárias.</p>
-    <div class="bottombar" style="margin-top:0">
-      <button class="btn" data-draw="free" ${freeOk ? "" : "disabled"}>${freeOk ? "Grátis hoje" : "Grátis amanhã"}</button>
-      <button class="btn" data-draw="1" ${P.crystals >= DRAW_COST ? "" : "disabled"}>x1 · ${DRAW_COST}</button>
-      <button class="btn gold" data-draw="10" ${P.crystals >= DRAW10_COST ? "" : "disabled"}>x10 · ${DRAW10_COST}</button></div>
-    ${lastPull ? `<div class="pull-res">${lastPull.map(r => cardHtml(r.c.id, { sub: r.isNew ? "Nova!" : "+1 cópia", sel: r.c.rarity >= 2 })).join("")}</div>` : ""}
-    <p class="note">Os cristais vêm da primeira vitória em cada fase. Neste protótipo não há compras.</p></div></div>`;
-}
+
+// Painted backdrops for the parchment map and the zone path.
+const PAINTERS = {
+  parch(el) {
+    const c = document.createElement("canvas"), w = 360, h = 480; c.width = w; c.height = h; const g = c.getContext("2d"); const r = rng(5);
+    g.strokeStyle = "rgba(60,40,20,0.5)"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(40, 80); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; g.lineTo(w / 2 + Math.cos(a) * (140 + r() * 30), h / 2 + Math.sin(a) * (200 + r() * 30)); } g.closePath(); g.stroke();
+    g.fillStyle = "rgba(60,40,20,0.12)"; g.fill();
+    g.setLineDash([4, 6]); g.beginPath(); g.moveTo(w * 0.5, h * 0.74); g.quadraticCurveTo(w * 0.3, h * 0.62, w * 0.26, h * 0.52); g.quadraticCurveTo(w * 0.6, h * 0.45, w * 0.72, h * 0.4); g.quadraticCurveTo(w * 0.4, h * 0.3, w * 0.3, h * 0.25); g.quadraticCurveTo(w * 0.55, h * 0.18, w * 0.7, h * 0.14); g.stroke(); g.setLineDash([]);
+    g.fillStyle = "rgba(40,25,10,0.5)"; for (let i = 0; i < 14; i++) { const x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 8, y - 14); g.lineTo(x + 16, y); g.fill(); }
+    const fog = g.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w * 0.8); fog.addColorStop(0, "#0000"); fog.addColorStop(1, "rgba(20,14,8,0.5)"); g.fillStyle = fog; g.fillRect(0, 0, w, h);
+    el.prepend(c);
+  },
+  zone(el) {
+    const c = document.createElement("canvas"), w = 300, h = 440; c.width = w; c.height = h; const g = c.getContext("2d");
+    const pts = [[50, 92], [28, 82], [44, 71], [70, 63], [52, 53], [26, 45], [40, 34], [66, 27], [46, 18], [50, 7]].map(([x, y]) => [x / 100 * w, y / 100 * h]);
+    g.strokeStyle = "#3a2e28"; g.lineWidth = 14; g.lineCap = "round"; g.lineJoin = "round";
+    g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+    g.strokeStyle = "#5a4632"; g.lineWidth = 2; g.setLineDash([3, 5]); g.stroke(); g.setLineDash([]);
+    const r = rng(9); g.fillStyle = "rgba(0,0,0,0.5)"; for (let i = 0; i < 30; i++) { const x = r() * w, y = r() * h; g.beginPath(); g.arc(x, y, 3 + r() * 8, 0, 7); g.fill(); }
+    el.prepend(c);
+  },
+};
 
 function updateHud() {
   const h = run.hero;
-  $("hpFill").style.width = (100 * h.hp / h.maxHp) + "%"; $("hpText").textContent = `Sera ${h.hp} / ${h.maxHp}`;
-  $("manaFill").style.width = (100 * run.mana / run.maxMana) + "%"; $("manaText").textContent = `Mana ${Math.floor(run.mana)} / ${run.maxMana}`;
-  $("prog").style.width = Math.min(100, 100 * -h.z / -run.endZ) + "%";
+  $("hpFill").style.width = (100 * h.hp / h.maxHp) + "%"; $("hpText").textContent = `Sera ${h.hp}/${h.maxHp}`;
+  $("manaFill").style.width = (100 * run.mana / run.maxMana) + "%"; $("manaText").textContent = `${Math.floor(run.mana)} / MAX ${run.maxMana}`;
+  const left = Math.max(0, Math.ceil(run.timeLimit - run.t));
+  $("time").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  $("timeBox").classList.toggle("low", left <= 30);
+  const pips = $("pips").children; for (let i = 0; i < pips.length; i++) pips[i].classList.toggle("on", i < run.ambushes);
   run.cards.forEach((c, i) => {
     const el = $("dc" + i); if (!el) return;
-    if (!el.dataset.art) { el.dataset.art = 1; const cv = document.createElement("canvas"); cv.width = 120; cv.height = 90; cv.getContext("2d").drawImage(cardArt(c.def.id), 0, 0); el.prepend(cv); }
     $("cd" + i).style.transform = `scaleY(${c.cd / c.def.cd})`;
     el.classList.toggle("poor", run.mana < c.def.cost);
     el.classList.toggle("ready", run.mana >= c.def.cost && c.cd === 0);
@@ -888,36 +1199,62 @@ function updateHud() {
 }
 
 function bind() {
-  ui.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
-  ui.querySelectorAll("[data-stage]").forEach(b => b.onclick = () => { selStage = +b.dataset.stage; pendingDeck = P.deck.filter(id => P.cards[id]).slice(0, 6); go("deck"); });
-  ui.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
+  const on = (sel, fn) => ui.querySelectorAll(sel).forEach(b => b.onclick = () => fn(b));
+  on("[data-tab]", b => { const t = TABS.find(x => x.id === b.dataset.tab); if (tab === t.id && view !== "lobby") { tab = null; return open("lobby"); } tab = t.id; if (t.soon) { soonName = t.name; return open("soon"); } cardSel = null; deckSlot = null; open(t.id); });
+  on("[data-open]", b => { const v = b.dataset.open; if (v === "lobby") tab = null; if (v === "zone" || v === "map") tab = "map"; if (v === "village" || v.startsWith("npc")) tab = null; open(v); });
+  on("[data-close]", () => { tab = null; open("lobby"); });
+  on("[data-soon]", b => { soonName = b.dataset.soon; tab = null; open("soon"); });
+  on("[data-stage]", b => { selStage = +b.dataset.stage; pendingDeck = P.deck.filter(id => P.cards[id]).slice(0, 6); open("deck"); });
+  on("[data-pick]", b => {
     const id = b.dataset.pick, i = pendingDeck.indexOf(id);
     if (i >= 0) pendingDeck.splice(i, 1); else if (pendingDeck.length < 6) pendingDeck.push(id); else return toast("O baralho já tem 6 cartas.");
     render();
   });
-  const st = ui.querySelector("[data-start]"); if (st) st.onclick = () => { P.deck = pendingDeck.slice(); save(); startRun(selStage); };
-  ui.querySelectorAll("[data-card]").forEach(b => b.onclick = () => {
-    if (!run || paused) return;
-    const c = run.cards[+b.dataset.card];
-    if (!run.playCard(+b.dataset.card)) toast(c.cd > 0 ? "Em recarga." : run.mana < c.def.cost ? "Mana insuficiente." : "Sem alvo por perto.");
+  on("[data-start]", () => { P.deck = pendingDeck.slice(); save(); startRun(selStage); });
+  on("[data-slot]", b => {
+    const i = +b.dataset.slot;
+    if (pendingUse) { P.deck = P.deck.filter(id => P.cards[id]); P.deck[i] = pendingUse; P.deck = P.deck.filter(Boolean); toast(`${CARD[pendingUse].name} entrou no baralho.`); pendingUse = null; save(); return render(); }
+    deckSlot = deckSlot === i ? null : i; render();
   });
-  ui.querySelectorAll("[data-up]").forEach(b => b.onclick = () => {
+  on("[data-card-sel]", b => {
+    const id = b.dataset.cardSel;
+    if (deckSlot !== null) { if (P.deck.includes(id)) return toast("Essa carta já está no baralho."); P.deck = P.deck.filter(x => P.cards[x]); P.deck[deckSlot] = id; P.deck = P.deck.filter(Boolean); deckSlot = null; save(); toast(`${CARD[id].name} entrou no baralho.`); }
+    cardSel = id; render();
+  });
+  on("[data-use]", b => { const id = b.dataset.use; if (P.deck.includes(id)) return; deckSlot = null; pendingUse = id; render(); });
+  on("[data-up]", b => {
     const id = b.dataset.up, o = P.cards[id], need = Prog.copiesToLevel(o.level), gold = Prog.goldToLevel(o.level);
-    if (o.level >= Prog.maxCardLevel) return toast("Já está no nível máximo.");
     if (o.copies < need) return toast(`Faltam ${need - o.copies} cópias.`);
     if (P.gold < gold) return toast("Ouro insuficiente.");
     o.copies -= need; P.gold -= gold; o.level++; save(); toast(`${CARD[id].name} subiu para o nível ${o.level}.`); render();
   });
-  ui.querySelectorAll("[data-draw]").forEach(b => b.onclick = () => {
-    const k = b.dataset.draw, today = new Date().toISOString().slice(0, 10);
-    let res;
-    if (k === "free") { if (P.freeDay === today) return; P.freeDay = today; res = drawCards(P, 1, true); }
-    else { const cost = k === "10" ? DRAW10_COST : DRAW_COST; if (P.crystals < cost) return toast("Cristais insuficientes."); P.crystals -= cost; res = drawCards(P, k === "10" ? 10 : 1, false); }
+  on("[data-npc]", b => {
+    const k = b.dataset.npc, n = NPC[npcId];
+    if (k === "talk") { npcLine = (npcLine + 1) % n.lines.length; if (P.affinity[npcId] < 3) P.affinity[npcId]++; save(); render(); }
+    else if (k === "shop" || k === "altar") open("shop");
+    else toast("Em breve.");
+  });
+  on("[data-buy]", b => {
+    const o = dailyOffers().find(x => x.id === b.dataset.buy);
+    if (!o || P.bought.ids.includes(o.id) || P.gold < o.price) return;
+    P.gold -= o.price; P.bought.ids.push(o.id); grantCard(P, o.id, o.qty); P.affinity.ilsa = Math.min(10, P.affinity.ilsa + 1);
+    save(); toast(`+${o.qty} ${CARD[o.id].name}`); render();
+  });
+  on("[data-draw]", b => {
+    const k = b.dataset.draw; let res;
+    if (k === "free") { if (P.freeDay === today()) return; P.freeDay = today(); res = drawCards(P, 1, true); }
+    else { const cost = k === "10" ? DRAW10_COST : DRAW_COST; if (P.crystals < cost) return toast("Gemas insuficientes."); P.crystals -= cost; res = drawCards(P, k === "10" ? 10 : 1, false); P.affinity.ilsa = Math.min(10, P.affinity.ilsa + 1); }
     lastPull = res.map(c => ({ c, isNew: grantCard(P, c.id) })); save(); render();
   });
-  const sp = $("spd"); if (sp) sp.onclick = () => { speedMul = speedMul === 1 ? 2 : 1; sp.textContent = speedMul + "x"; };
-  const pa = $("pause"); if (pa) pa.onclick = () => { paused = !paused; render(); };
+  on("[data-reset]", () => { if (!resetArm) { resetArm = true; render(); return; } resetArm = false; P = newProfile(); P.affinity = { ilsa: 0, brenna: 0, gorm: 0, kael: 0 }; P.bought = { day: today(), ids: [] }; P.stars = {}; save(); tab = null; toast("Progresso apagado."); open("lobby"); });
+  on("[data-card]", b => {
+    if (!run || paused) return;
+    const c = run.cards[+b.dataset.card];
+    if (!run.playCard(+b.dataset.card)) toast(c.cd > 0 ? "Em recarga." : run.mana < c.def.cost ? "Mana insuficiente." : "Sem alvo por perto.");
+  });
+  const m = $("menu"); if (m) m.onclick = () => { paused = true; render(); };
   const re = $("resume"); if (re) re.onclick = () => { paused = false; render(); };
+  const sp = $("spd"); if (sp) sp.onclick = () => { speedMul = speedMul === 1 ? 2 : 1; render(); };
   const qu = $("quit"); if (qu) qu.onclick = () => { paused = false; run.state = "lose"; endRun(); };
 }
 
@@ -927,13 +1264,18 @@ function startRun(n) {
   buildLevel(run);
   const evs = run.events; run.events = []; evs.forEach(present);
   camZ = run.hero.z; paused = false;
-  screen = "battle"; render();
+  view = "battle"; screen = "battle"; render();
 }
 function endRun() {
-  lastResult = claimRun(P, run); save();
-  screen = "result"; render();
+  const h = run.hero;
+  lastResult = claimRun(P, run);
+  lastResult.timedOut = run.timedOut;
+  if (lastResult.win) { const stars = 1 + (h.hp > h.maxHp * 0.5 ? 1 : 0) + (run.t < run.timeLimit * 0.5 ? 1 : 0); lastResult.stars = stars; P.stars[run.stage.n] = Math.max(P.stars[run.stage.n] || 0, stars); }
+  save();
+  view = "result"; screen = "result"; render();
 }
 
+let screen = "home";
 resize();
 showTitleScene();
 render();
