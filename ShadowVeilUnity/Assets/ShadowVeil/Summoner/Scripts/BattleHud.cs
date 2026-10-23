@@ -111,8 +111,7 @@ namespace ShadowVeil.Summoner
                 button.onClick.AddListener(() => battle.PlayCard(index));
                 Image face = Ui.Box("Face", frame.transform, Vector2.zero, Vector2.one, card.tint * 0.55f + new Color(0f, 0f, 0f, 0.45f), new Vector2(4f, 4f), new Vector2(-4f, -4f));
                 Image portrait = Ui.Box("Portrait", face.transform, new Vector2(0.1f, 0.36f), new Vector2(0.9f, 0.92f), card.tint);
-                // Optional local art: drop sprites in a Resources/CardArt folder named after the card id.
-                Sprite art = Resources.Load<Sprite>("CardArt/" + card.id);
+                Sprite art = string.IsNullOrEmpty(card.portrait) ? null : Resources.Load<Sprite>("CardArt/" + card.portrait);
                 if (art != null) { portrait.sprite = art; portrait.color = Color.white; portrait.preserveAspect = true; }
                 Ui.Label("Title", face.transform, card.title, 15, TextAnchor.LowerCenter, Color.white, new Vector2(0f, 0.02f), new Vector2(1f, 0.4f));
                 Image badge = Ui.Box("Cost badge", frame.transform, new Vector2(-0.08f, 0.78f), new Vector2(0.32f, 1.05f), new Color(0.25f, 0.10f, 0.40f));

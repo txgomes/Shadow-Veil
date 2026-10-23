@@ -30,9 +30,8 @@ A cena `Assets/Scenes/FirstSummoner.unity` é a primeira na build e tem uma fase
 
 O código está em `Assets/ShadowVeil/Summoner/Scripts/`. As cartas estão em `CardLibrary.cs`, o inimigo em `EnemyDirector.cs` e o HUD em `BattleHud.cs`.
 
-### Arte local (não vai para o Git)
+### Arte do jogo original
 
-A pasta `Assets/ShadowVeil/Private/` está no `.gitignore`. Põe lá a arte do jogo original:
-
-- `Private/Resources/Characters/<modelId>.prefab`: um prefab com Animator (bool `Moving`, triggers `Attack` e `Death`) substitui o boneco de formas simples. Os ids são `rachel` e o `modelId` de cada carta (`skeleton_archer`, `ogre`, `succubus`…).
-- `Private/Resources/CardArt/<cardId>.png` (importado como Sprite): o retrato da carta no HUD.
+- Os retratos das tropas extraídos do APK ficam em `Assets/ShadowVeil/Summoner/Resources/CardArt/`, com o nome original (`UIPatch_Icon_Troop_Skeleton_Archer.png`…). O campo `portrait` de cada carta aponta para eles e o `SummonerSpriteImporter` importa-os como Sprite.
+- O resto da UI extraída fica em `Assets/ShadowVeil/Summoner/Art/`.
+- Modelos 3D: um prefab em `Resources/Characters/<modelId>.prefab` com Animator (bool `Moving`, triggers `Attack` e `Death`) substitui o boneco de formas simples. Os ids são `rachel` e o `modelId` de cada carta. A pasta `Assets/ShadowVeil/Private/` (no `.gitignore`) serve para arte que não deve ir para o GitHub.
