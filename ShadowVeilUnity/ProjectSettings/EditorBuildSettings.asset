@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/FirstSummoner.unity
+    guid: dd6c0c176793460d9ca7840b3442f327
+  - enabled: 1
     path: Assets/Scenes/ShadowVeil.unity
     guid: 201bcab36c224adba6e4f74fb23ea3a2
   m_configObjects: {}

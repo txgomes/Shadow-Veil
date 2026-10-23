@@ -26,3 +26,7 @@ Builds/
 
 # Local reference footage is intentionally kept out of version control.
 *.mp4
+
+# Art taken from the original First Summoner stays local (models, card art, sounds).
+ShadowVeilUnity/Assets/ShadowVeil/Private/
+ShadowVeilUnity/Assets/ShadowVeil/Private.meta
