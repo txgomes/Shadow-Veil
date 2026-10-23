@@ -41,6 +41,8 @@ body { background: var(--void); color: var(--ink); font-family: var(--body); ove
 #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 #ui { position: absolute; inset: 0; pointer-events: none; }
 #ui > * { pointer-events: auto; }
+/* The battle HUD covers the whole screen but must let drags through to the 3D floor. */
+#ui > .hud { pointer-events: none; }
 .hpb { position: absolute; width: 38px; height: 5px; background: #000c; transform: translate(-50%, -50%); clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%); }
 .hpb i { display: block; height: 100%; background: var(--blood); }
 .hpb.ally i { background: var(--heal); }
